@@ -1,4 +1,4 @@
-console.log("DASHBOARD.JS v52 CARREGADO");
+console.log("DASHBOARD.JS v53 CARREGADO");
 
 
 // =========================================================
@@ -1011,17 +1011,94 @@ function definirEstadoBotaoSalvar(
 
 
 
-function arquivoParaDataURL(arquivo){
-    return new Promise((resolve, reject) => {
-        if(!arquivo){
-            resolve(null);
-            return;
+async function arquivoParaDataURL(
+    arquivo
+){
+
+    if(
+        !arquivo
+    ){
+        return null;
+    }
+
+    if(
+        !arquivo.type ||
+        !arquivo.type.startsWith(
+            "image/"
+        )
+    ){
+        throw new Error(
+            "Um dos arquivos selecionados não é uma imagem válida."
+        );
+    }
+
+    try{
+
+        const buffer =
+            await arquivo.arrayBuffer();
+
+        const bytes =
+            new Uint8Array(
+                buffer
+            );
+
+        const tamanhoBloco =
+            0x8000;
+
+        let binario =
+            "";
+
+        for(
+            let inicio = 0;
+            inicio < bytes.length;
+            inicio += tamanhoBloco
+        ){
+
+            const fim =
+                Math.min(
+                    inicio + tamanhoBloco,
+                    bytes.length
+                );
+
+            binario +=
+                String.fromCharCode(
+                    ...bytes.subarray(
+                        inicio,
+                        fim
+                    )
+                );
+
         }
-        const leitor = new FileReader();
-        leitor.onload = () => resolve(String(leitor.result || ""));
-        leitor.onerror = () => reject(new Error("Não foi possível ler um dos prints."));
-        leitor.readAsDataURL(arquivo);
-    });
+
+        const base64 =
+            btoa(
+                binario
+            );
+
+        return (
+            `data:${arquivo.type};base64,` +
+            base64
+        );
+
+    }
+    catch(erro){
+
+        console.error(
+            "ERRO AO CONVERTER PRINT:",
+            {
+                nome: arquivo?.name,
+                tipo: arquivo?.type,
+                tamanho: arquivo?.size,
+                erro
+            }
+        );
+
+        throw new Error(
+            `Não foi possível preparar o print "${arquivo?.name || "desconhecido"}" para salvar.`
+        );
+
+    }
+
 }
 
 // =========================================================
@@ -1063,11 +1140,61 @@ async function salvarComprovante(){
         );
 
 
-        const arquivoEnvio = obterElemento("printEnvio")?.files?.[0] || null;
-        const arquivoRecebimento = obterElemento("printRecebimento")?.files?.[0] || null;
+        const arquivoEnvio =
+            obterElemento(
+                "printEnvio"
+            )?.files?.[0] ||
+            null;
 
-        dados.print_envio_base64 = await arquivoParaDataURL(arquivoEnvio);
-        dados.print_recebimento_base64 = await arquivoParaDataURL(arquivoRecebimento);
+        const arquivoRecebimento =
+            obterElemento(
+                "printRecebimento"
+            )?.files?.[0] ||
+            null;
+
+        if(
+            !arquivoEnvio ||
+            !arquivoRecebimento
+        ){
+            throw new Error(
+                "Os dois prints precisam continuar selecionados para salvar a operação."
+            );
+        }
+
+        console.log(
+            "PREPARANDO PRINTS PARA SALVAR:",
+            {
+                envio: {
+                    nome: arquivoEnvio.name,
+                    tamanho: arquivoEnvio.size,
+                    tipo: arquivoEnvio.type
+                },
+                recebimento: {
+                    nome: arquivoRecebimento.name,
+                    tamanho: arquivoRecebimento.size,
+                    tipo: arquivoRecebimento.type
+                }
+            }
+        );
+
+        const [
+            printEnvioBase64,
+            printRecebimentoBase64
+        ] =
+        await Promise.all([
+            arquivoParaDataURL(
+                arquivoEnvio
+            ),
+            arquivoParaDataURL(
+                arquivoRecebimento
+            )
+        ]);
+
+        dados.print_envio_base64 =
+            printEnvioBase64;
+
+        dados.print_recebimento_base64 =
+            printRecebimentoBase64;
 
         console.log(
             "SALVANDO OPERAÇÃO:",
