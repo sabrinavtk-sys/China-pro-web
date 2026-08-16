@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    console.log("OCR.JS v45 CARREGADO");
+    console.log("OCR.JS v50 CARREGADO");
 
     // =========================================================
     // ESTADO PRIVADO
@@ -623,7 +623,111 @@
             "PRINT DE ENVIO",
             "6"
         );
-    }    async function lerVariacoesRecebimento(
+    }
+    // =========================================================
+    // DATA E HORA DO RODAPÉ DO PRINT FINAL
+    // Ex.: ID: 768 - 25/07/2026 - 23:41 - PING: ...
+    // =========================================================
+
+    async function lerRodapeDataHora(
+        arquivo
+    ){
+        const imagem =
+            await carregarImagemArquivo(
+                arquivo
+            );
+
+        const configuracoes = [
+            {
+                nome:
+                    "RODAPÉ DATA/HORA CINZA",
+                x: 0.52,
+                y: 0.90,
+                largura: 0.48,
+                altura: 0.10,
+                escala: 4.0,
+                filtro: "cinza",
+                psm: "7"
+            },
+            {
+                nome:
+                    "RODAPÉ DATA/HORA BINÁRIO",
+                x: 0.52,
+                y: 0.90,
+                largura: 0.48,
+                altura: 0.10,
+                escala: 4.0,
+                filtro: "binario",
+                limiar: 145,
+                psm: "7"
+            }
+        ];
+
+        const leituras = [];
+
+        for(
+            const configuracao
+            of configuracoes
+        ){
+            const recorte =
+                criarCanvasRecorte(
+                    imagem,
+                    configuracao
+                );
+
+            const processado =
+                aplicarFiltro(
+                    recorte,
+                    configuracao
+                );
+
+            leituras.push(
+                await reconhecerTexto(
+                    processado,
+                    configuracao.nome,
+                    configuracao.psm
+                )
+            );
+        }
+
+        for(
+            const leitura
+            of leituras
+        ){
+            const data =
+                typeof window.pegarData === "function"
+                    ? window.pegarData(
+                        leitura.texto
+                    )
+                    : "---";
+
+            if(
+                data &&
+                data !== "---"
+            ){
+                return {
+                    data,
+                    texto:
+                        leitura.texto,
+                    leitura:
+                        leitura.nome
+                };
+            }
+        }
+
+        return {
+            data: "---",
+            texto:
+                leituras
+                .map(x => x.texto)
+                .join("\n"),
+            leitura:
+                "não identificada"
+        };
+    }
+
+
+    async function lerVariacoesRecebimento(
         arquivo
     ) {
         const imagem =
@@ -853,9 +957,35 @@
 
         if (
             valorEnvio > 0 &&
+            valorRecebido <= valorEnvio
+        ) {
+            pontuacao -= 120;
+        }
+
+        if (
+            valorEnvio > 0 &&
             valorRecebido > valorEnvio
         ) {
-            pontuacao -= 70;
+            const percentual =
+                (
+                    (
+                        valorRecebido -
+                        valorEnvio
+                    )
+                    /
+                    valorRecebido
+                )
+                * 100;
+
+            if(
+                percentual >= 20 &&
+                percentual <= 40
+            ){
+                pontuacao += 80;
+            }
+            else{
+                pontuacao -= 100;
+            }
         }
 
         return {
@@ -997,9 +1127,6 @@
                 idJogador:
                     "---",
 
-                dataOperacao:
-                    "---",
-
                 valorRecebido:
                     "R$ 0",
 
@@ -1063,38 +1190,13 @@
                 "---";
         }
 
-        if (data) {
-
-            const dataOCR =
-                String(
-                    resultado.data || ""
-                )
-                .trim();
-
-            if(
-                dataOCR &&
-                dataOCR !== "---"
-            ){
-
-                /*
-                    A data e a hora devem vir do print.
-                    Removemos qualquer marcação que impeça o OCR
-                    de atualizar o campo.
-                */
-
-                delete data.dataset.dataFixa;
-
-                data.textContent =
-                    dataOCR;
-
-
-                console.log(
-                    "DATA/HORA APLICADA DO PRINT:",
-                    dataOCR
-                );
-
-            }
-
+        if (
+            data &&
+            resultado.data &&
+            resultado.data !== "---"
+        ) {
+            data.textContent =
+                resultado.data;
         }
 
         const valorRecebido =
@@ -1124,6 +1226,16 @@
         }
 
         if (
+            typeof window
+                .aplicarCalculoAutomatico ===
+            "function"
+        ) {
+            window.aplicarCalculoAutomatico(
+                Number(resultado.recebido) || 0,
+                Number(resultado.envio) || 0
+            );
+        }
+        else if (
             typeof window
                 .calcularGanho ===
             "function"
@@ -1191,7 +1303,7 @@
             );
 
             console.log(
-                "INICIANDO PROCESSAMENTO OCR v45"
+                "INICIANDO PROCESSAMENTO OCR v50"
             );
 
             console.log(
@@ -1228,6 +1340,20 @@
                 await lerVariacoesRecebimento(
                     arquivoRecebimento
                 );
+
+            /*
+                A data/hora correta vem do SEGUNDO PRINT,
+                que representa a conclusão da operação.
+            */
+            const leituraRodape =
+                await lerRodapeDataHora(
+                    arquivoRecebimento
+                );
+
+            console.log(
+                "DATA/HORA DO PRINT FINAL:",
+                leituraRodape
+            );
 
             const textoCombinado =
                 leiturasRecebimento
@@ -1280,8 +1406,67 @@
                 throw new Error(
                     "Não foi possível identificar o valor do balão azul."
                 );
-            }            const resultadoFinal = {
+            }
+
+            const valorEnviado =
+                Number(
+                    resultadoBase.envio
+                ) || 0;
+
+            if(
+                valorEnviado <= 0
+            ){
+                throw new Error(
+                    "Não foi possível identificar o valor enviado no balão verde."
+                );
+            }
+
+            if(
+                valorRecebido <=
+                valorEnviado
+            ){
+                throw new Error(
+                    "Os valores identificados são incompatíveis: o valor original deve ser maior que o valor enviado."
+                );
+            }
+
+            const percentualAutomatico =
+                (
+                    (
+                        valorRecebido -
+                        valorEnviado
+                    )
+                    /
+                    valorRecebido
+                )
+                * 100;
+
+            if(
+                percentualAutomatico < 20 ||
+                percentualAutomatico > 40
+            ){
+                throw new Error(
+                    "A porcentagem calculada ficou fora de 20% a 40%. Confira os prints: o OCR pode ter perdido algum zero."
+                );
+            }
+
+            const ganhoAutomatico =
+                valorRecebido -
+                valorEnviado;
+
+            const resultadoFinal = {
                 ...resultadoBase,
+
+                data:
+                    leituraRodape.data !== "---"
+                        ? leituraRodape.data
+                        : resultadoBase.data,
+
+                percentualAutomatico,
+                ganhoAutomatico,
+
+                leituraDataHora:
+                    leituraRodape.leitura,
 
                 leituraOCR:
                     melhor.nome,
@@ -1396,6 +1581,6 @@
         limparProcessamentoAnterior;
 
     console.log(
-        "OCR.JS v45 PRONTO"
+        "OCR.JS v50 PRONTO"
     );
 })();
