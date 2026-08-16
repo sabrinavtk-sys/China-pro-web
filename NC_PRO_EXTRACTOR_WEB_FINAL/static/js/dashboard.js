@@ -1097,7 +1097,7 @@ function gerarTextoComprovante(){
 
 👤 Jogador: ${dados.nome_jogador}
 🆔 ID: ${dados.id_jogador}
-📅 Data: ${dados.data_exibicao}
+📅 Data e hora: ${dados.data_exibicao}
 
 💵 Valor processado: ${valorFormatado}
 📊 Porcentagem aplicada: ${porcentagemFormatada}%
