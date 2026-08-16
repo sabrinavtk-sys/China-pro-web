@@ -370,11 +370,39 @@ def configurar_rotas(app):
             Decimal("0.01")
         )
 
-        percentual_positivo = (
+        percentual_bruto = (
             ganho_calculado /
             valor *
             Decimal("100")
         )
+
+        percentual_inteiro = Decimal(
+            round(
+                float(
+                    percentual_bruto
+                )
+            )
+        )
+
+        distancia_inteiro = abs(
+            percentual_bruto -
+            percentual_inteiro
+        )
+
+        if (
+            distancia_inteiro <=
+            Decimal("0.35")
+        ):
+            percentual_positivo = (
+                percentual_inteiro
+            )
+        else:
+            percentual_positivo = (
+                percentual_bruto
+                .quantize(
+                    Decimal("0.01")
+                )
+            )
 
         if (
             percentual_positivo <
@@ -386,6 +414,15 @@ def configurar_rotas(app):
             return resposta_erro(
                 "A porcentagem automática ficou fora de 20% a 40%. O OCR pode ter perdido algum zero."
             )
+
+        # Recalcula o ganho pela taxa normalizada.
+        ganho_calculado = (
+            valor *
+            percentual_positivo /
+            Decimal("100")
+        ).quantize(
+            Decimal("0.01")
+        )
 
         # Compatibilidade com o banco atual, que armazena taxa negativa.
         porcentagem = (

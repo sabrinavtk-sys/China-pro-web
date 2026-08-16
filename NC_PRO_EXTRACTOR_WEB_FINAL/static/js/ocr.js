@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    console.log("OCR.JS v51 CARREGADO");
+    console.log("OCR.JS v52 CARREGADO");
 
     // =========================================================
     // ESTADO PRIVADO
@@ -1415,7 +1415,7 @@
             );
 
             console.log(
-                "INICIANDO PROCESSAMENTO OCR v51"
+                "INICIANDO PROCESSAMENTO OCR v52"
             );
 
             console.log(
@@ -1542,7 +1542,7 @@
                 );
             }
 
-            const percentualAutomatico =
+            const percentualBruto =
                 (
                     (
                         valorRecebido -
@@ -1553,6 +1553,33 @@
                 )
                 * 100;
 
+            /*
+                As taxas da organização são inteiras.
+                O OCR pode errar 1 ou 2 dígitos pequenos no valor,
+                fazendo 20% aparecer como 19,97%, por exemplo.
+
+                Se o resultado estiver muito perto de um inteiro,
+                normalizamos para esse inteiro.
+            */
+            const percentualArredondado =
+                Math.round(
+                    percentualBruto
+                );
+
+            const distanciaDoInteiro =
+                Math.abs(
+                    percentualBruto -
+                    percentualArredondado
+                );
+
+            const percentualAutomatico =
+                distanciaDoInteiro <= 0.35
+                    ? percentualArredondado
+                    : Number(
+                        percentualBruto
+                            .toFixed(2)
+                    );
+
             if(
                 percentualAutomatico < 20 ||
                 percentualAutomatico > 40
@@ -1562,9 +1589,30 @@
                 );
             }
 
+            /*
+                O ganho do relatório segue a porcentagem normalizada.
+                Isso evita que um pequeno erro de OCR altere o valor
+                financeiro quando a taxa correta é, por exemplo, 20%.
+            */
             const ganhoAutomatico =
-                valorRecebido -
-                valorEnviado;
+                Number(
+                    (
+                        valorRecebido *
+                        percentualAutomatico /
+                        100
+                    )
+                    .toFixed(2)
+                );
+
+            console.log(
+                "PORCENTAGEM AUTOMÁTICA:",
+                {
+                    percentualBruto,
+                    percentualAutomatico,
+                    distanciaDoInteiro,
+                    ganhoAutomatico
+                }
+            );
 
             const resultadoFinal = {
                 ...resultadoBase,
@@ -1693,6 +1741,6 @@
         limparProcessamentoAnterior;
 
     console.log(
-        "OCR.JS v51 PRONTO"
+        "OCR.JS v52 PRONTO"
     );
 })();

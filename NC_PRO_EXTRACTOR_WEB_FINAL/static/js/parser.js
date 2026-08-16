@@ -1,4 +1,4 @@
-console.log("PARSER.JS v51 CARREGADO");
+console.log("PARSER.JS v52 CARREGADO");
 
 
 // =========================================================
@@ -1441,7 +1441,7 @@ function parseOCR(
 
 
     console.log(
-        "PARSER v51 RECEBEU OCR"
+        "PARSER v52 RECEBEU OCR"
     );
 
 
@@ -1659,5 +1659,5 @@ testarParserV42;
 
 
 console.log(
-    "PARSER.JS v51 PRONTO"
+    "PARSER.JS v52 PRONTO"
 );

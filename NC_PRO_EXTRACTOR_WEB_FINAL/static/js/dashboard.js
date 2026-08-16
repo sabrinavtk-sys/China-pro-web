@@ -1,4 +1,4 @@
-console.log("DASHBOARD.JS v50 CARREGADO");
+console.log("DASHBOARD.JS v52 CARREGADO");
 
 
 // =========================================================
@@ -517,12 +517,30 @@ function aplicarCalculoAutomatico(
         valorEnviado;
 
 
-    const percentual =
+    const percentualBruto =
         (
             ganho /
             valorOriginal
         )
         * 100;
+
+
+    const percentualInteiro =
+        Math.round(
+            percentualBruto
+        );
+
+
+    const percentual =
+        Math.abs(
+            percentualBruto -
+            percentualInteiro
+        ) <= 0.35
+            ? percentualInteiro
+            : Number(
+                percentualBruto
+                    .toFixed(2)
+            );
 
 
     if(
@@ -734,7 +752,11 @@ function obterDadosOperacao(){
         (
             valor > 0 &&
             valorEnvio > 0
-                ? valor - valorEnvio
+                ? (
+                    valor *
+                    Math.abs(porcentagem) /
+                    100
+                )
                 : 0
         );
 
