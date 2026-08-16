@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    console.log("OCR.JS v50 CARREGADO");
+    console.log("OCR.JS v51 CARREGADO");
 
     // =========================================================
     // ESTADO PRIVADO
@@ -593,36 +593,148 @@
                 arquivo
             );
 
-        const escala =
-            (
-                imagem.naturalWidth ||
-                imagem.width
-            ) < 1600
-                ? 1.4
-                : 1;
+        const configuracoes = [
+            {
+                nome: "ENVIO BALÃO VERDE - CINZA",
+                x: 0.005,
+                y: 0.075,
+                largura: 0.34,
+                altura: 0.18,
+                escala: 4.2,
+                filtro: "cinza",
+                psm: "6"
+            },
+            {
+                nome: "ENVIO BALÃO VERDE - BINÁRIO 135",
+                x: 0.005,
+                y: 0.075,
+                largura: 0.34,
+                altura: 0.18,
+                escala: 4.5,
+                filtro: "binario",
+                limiar: 135,
+                psm: "6"
+            },
+            {
+                nome: "ENVIO BALÃO VERDE - BINÁRIO 165",
+                x: 0.005,
+                y: 0.075,
+                largura: 0.34,
+                altura: 0.18,
+                escala: 4.5,
+                filtro: "binario",
+                limiar: 165,
+                psm: "6"
+            },
+            {
+                nome: "ENVIO TOPO ESQUERDO AMPLIADO",
+                x: 0,
+                y: 0.03,
+                largura: 0.46,
+                altura: 0.30,
+                escala: 3.2,
+                filtro: "cinza",
+                psm: "6"
+            },
+            {
+                nome: "ENVIO TELA COMPLETA",
+                x: 0,
+                y: 0,
+                largura: 1,
+                altura: 1,
+                escala:
+                    (
+                        imagem.naturalWidth ||
+                        imagem.width
+                    ) < 1600
+                        ? 1.4
+                        : 1,
+                filtro: "cinza",
+                psm: "6"
+            }
+        ];
 
-        const canvas =
-            criarCanvasRecorte(
-                imagem,
-                {
-                    x: 0,
-                    y: 0,
-                    largura: 1,
-                    altura: 1,
-                    escala
-                }
+        const leituras = [];
+
+        for(
+            const configuracao
+            of configuracoes
+        ){
+            const recorte =
+                criarCanvasRecorte(
+                    imagem,
+                    configuracao
+                );
+
+            const processado =
+                aplicarFiltro(
+                    clonarCanvas(
+                        recorte
+                    ),
+                    configuracao
+                );
+
+            const leitura =
+                await reconhecerTexto(
+                    processado,
+                    configuracao.nome,
+                    configuracao.psm
+                );
+
+            console.log(
+                configuracao.nome + ":",
+                leitura.texto
             );
 
-        aplicarCinza(
-            canvas,
-            1.15
-        );
+            leituras.push(
+                leitura
+            );
 
-        return reconhecerTexto(
-            canvas,
-            "PRINT DE ENVIO",
-            "6"
-        );
+            if(
+                typeof window.pegarValorEnvio ===
+                "function"
+            ){
+                const valorDetectado =
+                    window.pegarValorEnvio(
+                        leitura.texto
+                    );
+
+                if(
+                    Number(valorDetectado) > 0
+                ){
+                    return {
+                        nome:
+                            configuracao.nome,
+                        texto:
+                            leitura.texto,
+                        confianca:
+                            leitura.confianca
+                    };
+                }
+            }
+        }
+
+        return {
+            nome:
+                "ENVIO - LEITURAS COMBINADAS",
+            texto:
+                leituras
+                .map(
+                    leitura =>
+                        leitura.texto
+                )
+                .join("\n"),
+            confianca:
+                Math.max(
+                    0,
+                    ...leituras.map(
+                        leitura =>
+                            Number(
+                                leitura.confianca
+                            ) || 0
+                    )
+                )
+        };
     }
     // =========================================================
     // DATA E HORA DO RODAPÉ DO PRINT FINAL
@@ -1303,7 +1415,7 @@
             );
 
             console.log(
-                "INICIANDO PROCESSAMENTO OCR v50"
+                "INICIANDO PROCESSAMENTO OCR v51"
             );
 
             console.log(
@@ -1581,6 +1693,6 @@
         limparProcessamentoAnterior;
 
     console.log(
-        "OCR.JS v50 PRONTO"
+        "OCR.JS v51 PRONTO"
     );
 })();

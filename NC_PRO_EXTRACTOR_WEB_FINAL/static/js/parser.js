@@ -1,4 +1,4 @@
-console.log("PARSER.JS v50 CARREGADO");
+console.log("PARSER.JS v51 CARREGADO");
 
 
 // =========================================================
@@ -218,7 +218,23 @@ function pegarValorEnvio(texto){
             "frase de envio",
 
             regex:
-            /envi\w*\s+(?:o\s+valor\s+de\s+)?R?\s*\$?\s*([\d\s.,]{4,30}?)\s+(?:para|pra)\b/i
+            /envi\w*\s+(?:o\s+valor\s+de\s+)?R?\s*\$?\s*([\d\s.,oOiIlL|sSbB]{4,30}?)\s+(?:para|pra)\b/i
+        },
+
+        {
+            nome:
+            "sucesso + valor enviado",
+
+            regex:
+            /(?:sucesso|sucess[o0]|suc[e3]sso).*?(?:envi\w*|envlou|env1ou).*?R?\s*\$?\s*([\d\s.,oOiIlL|sSbB]{4,30})/i
+        },
+
+        {
+            nome:
+            "enviou valor sem para",
+
+            regex:
+            /(?:enviou|envlou|env1ou|envi0u)\D{0,12}R?\s*\$?\s*([\d\s.,oOiIlL|sSbB]{4,30})/i
         },
 
         {
@@ -259,7 +275,9 @@ function pegarValorEnvio(texto){
 
         const valor =
         converterValor(
-            busca[1]
+            corrigirTrechoNumerico(
+                busca[1]
+            )
         );
 
 
@@ -1423,7 +1441,7 @@ function parseOCR(
 
 
     console.log(
-        "PARSER v50 RECEBEU OCR"
+        "PARSER v51 RECEBEU OCR"
     );
 
 
@@ -1641,5 +1659,5 @@ testarParserV42;
 
 
 console.log(
-    "PARSER.JS v50 PRONTO"
+    "PARSER.JS v51 PRONTO"
 );
