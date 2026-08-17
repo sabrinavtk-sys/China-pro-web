@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    console.log("OCR.JS v52 CARREGADO");
+    console.log("OCR.JS v56 CARREGADO");
 
     // =========================================================
     // ESTADO PRIVADO
@@ -633,22 +633,6 @@
                 largura: 0.46,
                 altura: 0.30,
                 escala: 3.2,
-                filtro: "cinza",
-                psm: "6"
-            },
-            {
-                nome: "ENVIO TELA COMPLETA",
-                x: 0,
-                y: 0,
-                largura: 1,
-                altura: 1,
-                escala:
-                    (
-                        imagem.naturalWidth ||
-                        imagem.width
-                    ) < 1600
-                        ? 1.4
-                        : 1,
                 filtro: "cinza",
                 psm: "6"
             }
@@ -1415,7 +1399,7 @@
             );
 
             console.log(
-                "INICIANDO PROCESSAMENTO OCR v52"
+                "INICIANDO PROCESSAMENTO OCR v56"
             );
 
             console.log(
@@ -1537,8 +1521,23 @@
                 valorRecebido <=
                 valorEnviado
             ){
+
+                console.error(
+                    "VALORES INCOMPATÍVEIS:",
+                    {
+                        valorOriginalBalaoAzul:
+                            valorRecebido,
+                        valorEnviadoBalaoVerde:
+                            valorEnviado,
+                        leituraEnvio:
+                            leituraEnvio?.nome,
+                        textoEnvio:
+                            textoEnvio
+                    }
+                );
+
                 throw new Error(
-                    "Os valores identificados são incompatíveis: o valor original deve ser maior que o valor enviado."
+                    "O valor lido no balão verde ficou maior que o valor original. O OCR do envio não foi confiável; tente processar novamente."
                 );
             }
 
@@ -1741,6 +1740,6 @@
         limparProcessamentoAnterior;
 
     console.log(
-        "OCR.JS v52 PRONTO"
+        "OCR.JS v56 PRONTO"
     );
 })();
