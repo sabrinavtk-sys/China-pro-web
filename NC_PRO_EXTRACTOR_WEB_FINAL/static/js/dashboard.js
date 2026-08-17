@@ -1,4 +1,4 @@
-console.log("DASHBOARD.JS v53 CARREGADO");
+console.log("DASHBOARD.JS v55 CARREGADO");
 
 
 // =========================================================
@@ -1011,95 +1011,276 @@ function definirEstadoBotaoSalvar(
 
 
 
+async function blobParaDataURL(blob){
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const tamanhoBloco = 0x8000;
+    let binario = "";
+
+    for(let inicio = 0; inicio < bytes.length; inicio += tamanhoBloco){
+        const fim = Math.min(inicio + tamanhoBloco, bytes.length);
+        binario += String.fromCharCode(...bytes.subarray(inicio, fim));
+    }
+
+    return `data:${blob.type};base64,${btoa(binario)}`;
+}
+
 async function arquivoParaDataURL(
     arquivo
 ){
 
-    if(
-        !arquivo
-    ){
+    if(!arquivo){
         return null;
     }
 
     if(
         !arquivo.type ||
-        !arquivo.type.startsWith(
-            "image/"
-        )
+        !arquivo.type.startsWith("image/")
     ){
         throw new Error(
             "Um dos arquivos selecionados não é uma imagem válida."
         );
     }
 
+    let bitmap = null;
+
     try{
 
-        const buffer =
-            await arquivo.arrayBuffer();
-
-        const bytes =
-            new Uint8Array(
-                buffer
+        bitmap =
+            await createImageBitmap(
+                arquivo
             );
 
-        const tamanhoBloco =
-            0x8000;
+        /*
+            IMPORTANTE:
+            O OCR usa o arquivo ORIGINAL.
+            Esta redução acontece somente DEPOIS,
+            para criar a cópia que será salva no histórico.
+        */
+        const larguraMaxima =
+            960;
 
-        let binario =
-            "";
+        const alturaMaxima =
+            540;
 
-        for(
-            let inicio = 0;
-            inicio < bytes.length;
-            inicio += tamanhoBloco
+        const escala =
+            Math.min(
+                1,
+                larguraMaxima / bitmap.width,
+                alturaMaxima / bitmap.height
+            );
+
+        const largura =
+            Math.max(
+                1,
+                Math.round(
+                    bitmap.width *
+                    escala
+                )
+            );
+
+        const altura =
+            Math.max(
+                1,
+                Math.round(
+                    bitmap.height *
+                    escala
+                )
+            );
+
+        const canvas =
+            document.createElement(
+                "canvas"
+            );
+
+        canvas.width =
+            largura;
+
+        canvas.height =
+            altura;
+
+        const ctx =
+            canvas.getContext(
+                "2d",
+                {
+                    alpha: false
+                }
+            );
+
+        if(!ctx){
+            throw new Error(
+                "Não foi possível gerar a cópia reduzida do print."
+            );
+        }
+
+        ctx.drawImage(
+            bitmap,
+            0,
+            0,
+            largura,
+            altura
+        );
+
+        /*
+            Meta extremamente segura para Vercel:
+            até ~350 KB por print.
+            Dois prints em Base64 ficam bem abaixo de 4,5 MB.
+        */
+        const tamanhoAlvo =
+            350 * 1024;
+
+        let qualidade =
+            0.68;
+
+        let blob = null;
+
+        while(
+            qualidade >= 0.30
         ){
 
-            const fim =
-                Math.min(
-                    inicio + tamanhoBloco,
-                    bytes.length
+            blob =
+                await new Promise(
+                    resolve =>
+                        canvas.toBlob(
+                            resolve,
+                            "image/jpeg",
+                            qualidade
+                        )
                 );
 
-            binario +=
-                String.fromCharCode(
-                    ...bytes.subarray(
-                        inicio,
-                        fim
-                    )
+            if(!blob){
+                throw new Error(
+                    "O navegador não conseguiu comprimir o print."
+                );
+            }
+
+            if(
+                blob.size <=
+                tamanhoAlvo
+            ){
+                break;
+            }
+
+            qualidade -=
+                0.07;
+
+        }
+
+        /*
+            Fallback extremo:
+            se ainda estiver grande, cria 720x405.
+        */
+        if(
+            !blob ||
+            blob.size >
+            450 * 1024
+        ){
+
+            const canvasMenor =
+                document.createElement(
+                    "canvas"
+                );
+
+            canvasMenor.width =
+                720;
+
+            canvasMenor.height =
+                405;
+
+            const ctxMenor =
+                canvasMenor.getContext(
+                    "2d",
+                    {
+                        alpha: false
+                    }
+                );
+
+            if(!ctxMenor){
+                throw new Error(
+                    "Não foi possível gerar a versão compacta do print."
+                );
+            }
+
+            ctxMenor.drawImage(
+                bitmap,
+                0,
+                0,
+                canvasMenor.width,
+                canvasMenor.height
+            );
+
+            blob =
+                await new Promise(
+                    resolve =>
+                        canvasMenor.toBlob(
+                            resolve,
+                            "image/jpeg",
+                            0.42
+                        )
                 );
 
         }
 
-        const base64 =
-            btoa(
-                binario
+        if(!blob){
+            throw new Error(
+                "Não foi possível comprimir o print."
             );
+        }
 
-        return (
-            `data:${arquivo.type};base64,` +
-            base64
+        console.log(
+            "PRINT SALVO COMPACTADO:",
+            {
+                nome:
+                    arquivo.name,
+
+                originalKB:
+                    Math.round(
+                        arquivo.size /
+                        1024
+                    ),
+
+                finalKB:
+                    Math.round(
+                        blob.size /
+                        1024
+                    ),
+
+                resolucao:
+                    `${largura}x${altura}`
+            }
+        );
+
+        return await blobParaDataURL(
+            blob
         );
 
     }
     catch(erro){
 
         console.error(
-            "ERRO AO CONVERTER PRINT:",
-            {
-                nome: arquivo?.name,
-                tipo: arquivo?.type,
-                tamanho: arquivo?.size,
-                erro
-            }
+            "ERRO AO PREPARAR PRINT:",
+            erro
         );
 
         throw new Error(
-            `Não foi possível preparar o print "${arquivo?.name || "desconhecido"}" para salvar.`
+            "Não foi possível preparar os prints para salvar."
         );
+
+    }
+    finally{
+
+        if(
+            bitmap &&
+            typeof bitmap.close ===
+            "function"
+        ){
+            bitmap.close();
+        }
 
     }
 
 }
+
 
 // =========================================================
 // SALVAR COMPROVANTE
@@ -1195,6 +1376,37 @@ async function salvarComprovante(){
 
         dados.print_recebimento_base64 =
             printRecebimentoBase64;
+
+        const payloadTeste =
+            JSON.stringify(
+                dados
+            );
+
+        const tamanhoPayload =
+            new Blob([
+                payloadTeste
+            ]).size;
+
+        console.log(
+            "PAYLOAD PARA SALVAR:",
+            (
+                tamanhoPayload /
+                1024 /
+                1024
+            ).toFixed(2) +
+            " MB"
+        );
+
+        if(
+            tamanhoPayload >
+            2.0 *
+            1024 *
+            1024
+        ){
+            throw new Error(
+                "Os prints ainda ficaram grandes demais. O salvamento foi bloqueado antes de enviar."
+            );
+        }
 
         console.log(
             "SALVANDO OPERAÇÃO:",
