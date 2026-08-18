@@ -21,7 +21,7 @@
 
     <link
         rel="stylesheet"
-        href="{{ url_for('static', filename='css/dashboard.css') }}?v=50"
+        href="{{ url_for('static', filename='css/dashboard.css') }}?v=100"
     >
 
     <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
@@ -30,6 +30,7 @@
       window.addEventListener("load",()=>navigator.serviceWorker.register("/static/sw.js").catch(()=>{}));
     }
     </script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=2026">
 </head>
 
 
@@ -54,7 +55,7 @@
 
             <div class="logo">
 
-                <div class="logo-icone logo-icone-img"><img src="{{ url_for('static', filename='img/china-logo.jpg') }}" alt="China PRO"></div>
+                <div class="logo-icone">C</div>
 
                 <div class="logo-texto">
 
@@ -269,7 +270,7 @@
             <div class="usuario">
 
 
-                <div class="usuario-avatar usuario-avatar-logo"><img src="{{ url_for('static', filename='img/china-logo.jpg') }}" alt="Perfil China PRO"></div>
+                <div class="usuario-avatar">perfil</div>
 
 
                 <div class="usuario-dados">
@@ -290,6 +291,18 @@
 
         </header>
 
+
+
+        <section class="china-hero" style="background-image:url('{{ url_for('static', filename='img/members-hero-web.jpg') }}')">
+          <div class="china-hero-content"><span class="china-kicker">BEM-VINDA DE VOLTA</span><h2>{{ current_user.usuario }}</h2><p>Controle lavagens, ações, desmanches, metas e histórico em um único painel.</p><div class="china-hero-actions"><a class="china-btn" href="#secaoOCR">💰 Nova Lavagem</a><a class="china-btn alt" href="{{ url_for('acoes') }}">🔫 Registrar Ação</a><a class="china-btn alt" href="{{ url_for('desmanches') }}">🚗 Desmanche</a></div></div>
+        </section>
+        <section class="china-quick-grid">
+          <a class="china-quick" href="#secaoOCR"><span class="ico">💰</span><b>Lavagens</b><small>{{ total_operacoes }} registros</small></a>
+          <a class="china-quick" href="{{ url_for('acoes') }}"><span class="ico">🔫</span><b>Ações</b><small>{{ total_acoes }} registros</small></a>
+          <a class="china-quick" href="{{ url_for('desmanches') }}"><span class="ico">🚗</span><b>Desmanches</b><small>{{ total_desmanches }} registros</small></a>
+          <a class="china-quick" href="{{ url_for('ranking') }}"><span class="ico">🏆</span><b>Ranking</b><small>{{ pontos_acao }} pontos de ação</small></a>
+          <a class="china-quick china-teaser" href="javascript:void(0)" onclick="alert('🔒 Cassino da China — próxima atualização. Em breve!')"><span class="ico">🎰</span><b>Cassino da China</b><small>Próxima atualização</small></a>
+        </section>
 
         <!-- =====================================
              CARDS

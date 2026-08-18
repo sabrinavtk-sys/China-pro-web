@@ -362,6 +362,9 @@ def configurar_rotas(app):
         ultimas_operacoes = consulta_usuario.order_by(Operacao.criado_em.desc(), Operacao.id.desc()).limit(10).all()
         progresso = resumo_meta_semanal(current_user)
         data_hoje = agora_local().strftime("%d/%m/%Y")
+        total_acoes = Acao.query.filter_by(usuario_id=current_user.id).count()
+        total_desmanches = Desmanche.query.filter_by(usuario_id=current_user.id).count()
+        pontos_acao = db.session.query(func.coalesce(func.sum(ExtratoPonto.pontos), 0)).filter(ExtratoPonto.usuario_id == current_user.id, ExtratoPonto.categoria == "acao").scalar()
 
         return render_template(
             "dashboard.html",
@@ -371,6 +374,9 @@ def configurar_rotas(app):
             ultimas_operacoes=ultimas_operacoes,
             progresso=progresso,
             data_hoje=data_hoje,
+            total_acoes=total_acoes,
+            total_desmanches=total_desmanches,
+            pontos_acao=int(pontos_acao or 0),
         )
 
     @app.route("/salvar-operacao", methods=["POST"])

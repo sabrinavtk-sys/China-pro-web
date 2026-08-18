@@ -1,78 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
- 
-    <title>China PRO/by:sabrina moraize, yure oliveira- Login</title>
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-    <script>
-    if("serviceWorker" in navigator){
-      window.addEventListener("load",()=>navigator.serviceWorker.register("/static/sw.js").catch(()=>{}));
-    }
-    </script>
-</head>
-
-<body class="login-body">
-
-<div class="login-container">
-
-    <div class="login-box china-login-box">
-        <img class="china-login-logo" src="{{ url_for('static', filename='img/china-logo.jpg') }}" alt="China PRO">
-
-        <h1>China<span>PRO</span></h1>
-
-        <p class="subtitulo">
-            Sistema de Gestão • Lavagens • Ações • Desmanches
-        </p>
-
-        {% if erro %}
-        <div class="erro">
-            {{ erro }}
-        </div>
-        {% endif %}
-
-        <form method="POST">
-
-            <input
-                type="text"
-                name="usuario"
-                placeholder="Usuário"
-                required
-            >
-
-            <input
-                type="password"
-                name="senha"
-                placeholder="Senha"
-                required
-            >
-
-            <button type="submit">
-                Entrar
-            </button>
-
-        </form>
-
-        <a class="cadastro" href="{{ url_for('cadastro') }}">
-            Criar conta
-        </a>
-
-    </div>
-
-</div>
-
-<footer class="assinatura-login">
-
-    By: Sabrina Moraize &amp; Yure Oliveira
-
-</footer>
-
-</body>
-</html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08080b"><title>China PRO — Login</title><link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=2026"><link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}"></head>
+<body class="china-login"><main class="china-login-shell"><section class="china-login-card">
+<div class="login-logo"><img src="{{ url_for('static', filename='img/china-logo-web.jpg') }}" alt="China PRO"><strong>CHINA <span>PRO</span></strong></div>
+<h1>ENTRE NA SUA CONTA</h1>
+{% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+<form method="POST"><input type="text" name="usuario" placeholder="Usuário ou e-mail" required autocomplete="username"><input type="password" name="senha" placeholder="Senha" required autocomplete="current-password"><div class="china-login-meta"><span>🔒 Acesso protegido</span><span>Sistema de gestão</span></div><button type="submit">ENTRAR</button></form>
+<a class="china-login-create" href="{{ url_for('cadastro') }}">Não tem uma conta? <b>Criar agora</b></a>
+</section><div class="china-credit">By: Sabrina Moraize &amp; Yure Oliveira</div></main></body></html>

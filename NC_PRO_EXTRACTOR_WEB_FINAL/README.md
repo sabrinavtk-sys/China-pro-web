@@ -79,3 +79,7 @@ ADMIN_USER = admin  (opcional; se não informar, será "admin")
 No próximo deploy, o sistema cria automaticamente a conta administrativa.
 
 O admin acessa normalmente pela tela de login e verá o menu "Administração".
+
+
+## UI China PRO 2026
+Interface unificada preto/rosa/dourado aplicada a login, cadastro, dashboard e módulos de gestão. O Cassino da China aparece apenas como teaser bloqueado (Em breve), sem funcionalidade ativa.
