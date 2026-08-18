@@ -1,106 +1,116 @@
 {% extends "base_gestao.html" %}
-{% block title %}Gestão — ChinaPRO{% endblock %}
-{% block content %}
+{% block title %}Gestão — China PRO{% endblock %}
+{% block page_heading %}Visão Geral{% endblock %}
 
-<header class="top">
+{% block content %}
+<section class="page-intro">
   <div>
     <span class="kicker">CENTRAL DE GESTÃO</span>
-    <h1>Visão geral</h1>
-    <p class="muted">Tudo que você precisa, separado por setor e com acesso rápido.</p>
+    <h2>Olá, {{ current_user.usuario }}</h2>
+    <p class="muted">Acompanhe seus registros e acesse cada setor com facilidade.</p>
   </div>
-  <a class="btn secondary" href="{{ url_for('perfil_setores') }}">⚙️ Setores e cargos</a>
-</header>
+  <a class="btn secondary" href="{{ url_for('perfil_setores') }}">⚙ Setores e cargos</a>
+</section>
 
-<section class="grid three">
+<section class="grid three standard-stats">
   <article class="card stat">
     <span>Pontos de Ação</span>
     <strong>{{ pontos_acao }}</strong>
-    <small class="muted">Acumulados nesta semana</small>
+    <small class="muted">Nesta semana</small>
   </article>
-
   <article class="card stat">
     <span>Pontos de Lavagem</span>
     <strong>{{ pontos_lavagem }}</strong>
-    <small class="muted">Acumulados nesta semana</small>
+    <small class="muted">Nesta semana</small>
   </article>
-
   <article class="card stat">
-    <span>Cargo atual</span>
-    <strong style="font-size:20px">{{ perfil.cargo_acao or 'Não definido' }}</strong>
+    <span>Cargo de Ação</span>
+    <strong class="stat-cargo">{{ perfil.cargo_acao or 'Não definido' }}</strong>
     <small class="muted">{{ perfil.impulsos_acao }} impulso(s)</small>
   </article>
 </section>
 
-<section class="card" style="margin-top:14px">
+<section class="card standard-section">
   <div class="section-title">
-    <h2>⚡ Acesso rápido</h2>
-    <small class="muted">Escolha o que deseja registrar</small>
+    <div>
+      <h2>Acesso rápido</h2>
+      <small class="muted">Escolha o que deseja registrar ou consultar.</small>
+    </div>
   </div>
 
   <div class="quick-grid">
     <a class="quick-card" href="{{ url_for('dashboard') }}">
-      <strong>💰 Nova Lavagem</strong>
+      <span class="quick-icon">💰</span>
+      <strong>Lavagem</strong>
       <small>OCR, cálculo e relatório</small>
     </a>
-
     <a class="quick-card" href="{{ url_for('acoes') }}">
-      <strong>🔫 Nova Ação</strong>
-      <small>Resultado, participantes e pontos</small>
+      <span class="quick-icon">🔫</span>
+      <strong>Ações</strong>
+      <small>Resultados, participantes e pontos</small>
     </a>
-
     <a class="quick-card" href="{{ url_for('desmanches') }}">
-      <strong>🚗 Novo Desmanche</strong>
+      <span class="quick-icon">🚗</span>
+      <strong>Desmanches</strong>
       <small>Modelo, valor e pontuação</small>
     </a>
-  </div>
-<a class="quick-card china-teaser" href="javascript:void(0)" onclick="alert('🔒 Cassino da China — próxima atualização. Em breve!')"><strong>🎰 Cassino da China</strong><small>Prévia da próxima grande atualização</small></a>
+    <a class="quick-card" href="{{ url_for('ranking') }}">
+      <span class="quick-icon">🏆</span>
+      <strong>Ranking</strong>
+      <small>Veja todos os membros</small>
+    </a>
+    <a class="quick-card" href="{{ url_for('historico_geral') }}">
+      <span class="quick-icon">🗂</span>
+      <strong>Histórico</strong>
+      <small>Consulte seus registros</small>
+    </a>
+    {% if current_user.is_admin %}
+    <a class="quick-card" href="{{ url_for('admin_dashboard') }}">
+      <span class="quick-icon">🛡</span>
+      <strong>Administração</strong>
+      <small>Acompanhe os membros</small>
+    </a>
+    {% endif %}
   </div>
 </section>
 
-<section class="grid two" style="margin-top:14px">
+<section class="grid two standard-section-grid">
   <article class="card">
     <div class="section-title">
-      <h2>🎯 Meta de Ação</h2>
+      <h2>Meta de Ação</h2>
       <span class="pill">{{ perfil.cargo_acao or 'Sem cargo' }}</span>
     </div>
 
     {% if perfil.setor_acao and meta_acao %}
       {% if meta_acao.pontos %}
-        <p><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b></p>
-        <div class="progress">
-          <div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div>
-        </div>
+      <div class="metric-line">
+        <b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b>
+        <span>{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%</span>
+      </div>
+      <div class="progress">
+        <div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div>
+      </div>
       {% else %}
-        <p class="gold"><b>Meta de pontos não definida para este cargo.</b></p>
+      <p class="gold"><b>Meta de pontos não definida para este cargo.</b></p>
       {% endif %}
 
-      <p class="muted" style="margin-top:12px">
+      <p class="muted meta-detail">
         Papéis: {{ meta_acao.papeis if meta_acao.papeis is not none else '—' }}
         • Spray: {{ meta_acao.spray if meta_acao.spray is not none else '—' }}
         • Dinheiro: R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}
       </p>
     {% else %}
-      <p class="muted">Ative o setor de Ação e selecione seu cargo para acompanhar a meta.</p>
+      <p class="muted">Ative o setor de Ação e selecione seu cargo para acompanhar sua meta.</p>
     {% endif %}
   </article>
 
   <article class="card">
     <div class="section-title">
-      <h2>📌 Atalhos de acompanhamento</h2>
+      <h2>Informações</h2>
     </div>
-
-    <div class="actions">
-      <a class="btn secondary" href="{{ url_for('ranking') }}">🏆 Ranking</a>
-      <a class="btn secondary" href="{{ url_for('historico_geral') }}">🗂️ Histórico</a>
-      {% if current_user.is_admin %}
-      <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">🛡️ Administração</a>
-      {% endif %}
-    </div>
-
-    <div class="notice" style="margin-top:14px">
-      Os prints são usados somente durante o registro. Depois, ficam apenas os dados necessários.
+    <div class="notice">
+      Os prints são usados somente durante o registro. Depois, o sistema mantém apenas os dados necessários.
     </div>
   </article>
 </section>
-
 {% endblock %}

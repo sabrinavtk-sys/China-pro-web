@@ -1,18 +1,109 @@
 {% extends "base_gestao.html" %}
-{% block title %}Ranking — ChinaPRO{% endblock %}
+{% block title %}Ranking — China PRO{% endblock %}
+{% block page_heading %}Ranking{% endblock %}
+
 {% block content %}
-<header class="top"><div><span class="kicker">PONTUAÇÃO</span><h1>🏆 Ranking</h1><p class="muted">Os pontos são derivados dos registros; não existe contador manual.</p></div></header>
-<div class="filters" style="margin-bottom:16px">
-<a class="btn {% if categoria!='acao' %}secondary{% endif %}" href="?categoria=acao&periodo={{ periodo }}">Ação</a>
-<a class="btn {% if categoria!='lavagem' %}secondary{% endif %}" href="?categoria=lavagem&periodo={{ periodo }}">Lavagem</a>
-<a class="btn {% if periodo!='semana' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=semana">Semana</a>
-<a class="btn {% if periodo!='mes' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=mes">Mês</a>
-<a class="btn {% if periodo!='geral' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=geral">Geral</a>
+<section class="page-intro">
+  <div>
+    <span class="kicker">DESEMPENHO DOS MEMBROS</span>
+    <h2>Ranking da organização</h2>
+    <p class="muted">Todos os membros podem acompanhar quem está fazendo mais ou menos em cada categoria.</p>
+  </div>
+</section>
+
+<div class="filters ranking-period">
+  <a class="btn {% if periodo!='semana' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=semana">Esta semana</a>
+  <a class="btn {% if periodo!='mes' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=mes">Este mês</a>
+  <a class="btn {% if periodo!='geral' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=geral">Geral</a>
 </div>
-<section class="card">
-<table class="table"><tr><th>#</th><th>Membro</th><th>Pontos</th></tr>
-{% for nome,total in ranking %}<tr><td>{{ loop.index }}</td><td><b>{{ nome }}</b></td><td class="gold"><b>{{ total }}</b></td></tr>
-{% else %}<tr><td colspan="3" class="muted">Ainda não há pontos neste período.</td></tr>{% endfor %}
-</table>
+
+<section class="grid three ranking-top-grid">
+  <article class="card ranking-top">
+    <span class="ranking-medal">🥇</span>
+    <small>TOP 1 LAVAGEM</small>
+    {% if top_lavagem %}
+      <strong>{{ top_lavagem[0] }}</strong>
+      <b>{{ top_lavagem[1] }} lavagens</b>
+    {% else %}
+      <strong>—</strong>
+      <b>Sem registros</b>
+    {% endif %}
+  </article>
+
+  <article class="card ranking-top">
+    <span class="ranking-medal">🥇</span>
+    <small>TOP 1 AÇÃO</small>
+    {% if top_acao %}
+      <strong>{{ top_acao[0] }}</strong>
+      <b>{{ top_acao[1] }} pontos</b>
+    {% else %}
+      <strong>—</strong>
+      <b>Sem registros</b>
+    {% endif %}
+  </article>
+
+  <article class="card ranking-top">
+    <span class="ranking-medal">🥇</span>
+    <small>TOP 1 DESMANCHE</small>
+    {% if top_desmanche %}
+      <strong>{{ top_desmanche[0] }}</strong>
+      <b>{{ top_desmanche[1] }} desmanches</b>
+    {% else %}
+      <strong>—</strong>
+      <b>Sem registros</b>
+    {% endif %}
+  </article>
+</section>
+
+<section class="card standard-section">
+  <div class="section-title ranking-title-row">
+    <div>
+      <h2>Ranking completo</h2>
+      <small class="muted">
+        {% if categoria == 'lavagem' %}Quantidade de lavagens
+        {% elif categoria == 'acao' %}Pontos de ação
+        {% else %}Quantidade de desmanches{% endif %}
+      </small>
+    </div>
+
+    <div class="filters category-tabs">
+      <a class="btn {% if categoria!='lavagem' %}secondary{% endif %}" href="?categoria=lavagem&periodo={{ periodo }}">💰 Lavagem</a>
+      <a class="btn {% if categoria!='acao' %}secondary{% endif %}" href="?categoria=acao&periodo={{ periodo }}">🔫 Ação</a>
+      <a class="btn {% if categoria!='desmanche' %}secondary{% endif %}" href="?categoria=desmanche&periodo={{ periodo }}">🚗 Desmanche</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table ranking-table">
+      <thead>
+        <tr>
+          <th>Posição</th>
+          <th>Membro</th>
+          <th>
+            {% if categoria == 'acao' %}Pontos
+            {% else %}Quantidade{% endif %}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for nome,total in ranking %}
+        <tr class="{% if loop.index == 1 %}rank-first{% endif %}">
+          <td>
+            {% if loop.index == 1 %}🥇
+            {% elif loop.index == 2 %}🥈
+            {% elif loop.index == 3 %}🥉
+            {% else %}{{ loop.index }}º{% endif %}
+          </td>
+          <td><b>{{ nome }}</b></td>
+          <td class="gold"><b>{{ total }}</b></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="3" class="muted">Ainda não há registros neste período.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endblock %}

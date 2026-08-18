@@ -1254,39 +1254,120 @@ def configurar_rotas_gestao(app):
     @app.route("/ranking")
     @login_required
     def ranking():
-        categoria = request.args.get("categoria", "acao")
-        if categoria not in {"acao", "lavagem"}:
-            categoria = "acao"
+        categoria = request.args.get("categoria", "lavagem")
+        if categoria not in {"lavagem", "acao", "desmanche"}:
+            categoria = "lavagem"
 
         periodo = request.args.get("periodo", "semana")
-        filtros = [ExtratoPonto.categoria == categoria]
+        if periodo not in {"semana", "mes", "geral"}:
+            periodo = "semana"
+
+        inicio_periodo = None
+
         if periodo == "semana":
-            filtros.append(ExtratoPonto.criado_em >= inicio_semana())
+            inicio_periodo = inicio_semana()
+
         elif periodo == "mes":
             agora = datetime.now(FUSO_GESTAO)
-            inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
-            filtros.append(ExtratoPonto.criado_em >= inicio_mes)
+            inicio_periodo = agora.replace(
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            ).astimezone(timezone.utc)
 
-        ranking_rows = db.session.query(
-            Usuario.usuario,
-            func.coalesce(func.sum(ExtratoPonto.pontos), 0).label("total"),
-        ).join(
-            ExtratoPonto,
-            ExtratoPonto.usuario_id == Usuario.id,
-        ).filter(
-            *filtros
-        ).group_by(
-            Usuario.id,
-            Usuario.usuario,
-        ).order_by(
-            func.sum(ExtratoPonto.pontos).desc()
-        ).limit(100).all()
+        def ranking_lavagem():
+            consulta = db.session.query(
+                Usuario.usuario,
+                func.count(Operacao.id).label("total"),
+            ).join(
+                Operacao,
+                Operacao.usuario_id == Usuario.id,
+            )
+
+            if inicio_periodo is not None:
+                consulta = consulta.filter(
+                    Operacao.criado_em >= inicio_periodo
+                )
+
+            return consulta.group_by(
+                Usuario.id,
+                Usuario.usuario,
+            ).order_by(
+                func.count(Operacao.id).desc(),
+                Usuario.usuario.asc(),
+            ).limit(100).all()
+
+        def ranking_acao():
+            consulta = db.session.query(
+                Usuario.usuario,
+                func.coalesce(
+                    func.sum(ExtratoPonto.pontos),
+                    0,
+                ).label("total"),
+            ).join(
+                ExtratoPonto,
+                ExtratoPonto.usuario_id == Usuario.id,
+            ).filter(
+                ExtratoPonto.categoria == "acao",
+            )
+
+            if inicio_periodo is not None:
+                consulta = consulta.filter(
+                    ExtratoPonto.criado_em >= inicio_periodo
+                )
+
+            return consulta.group_by(
+                Usuario.id,
+                Usuario.usuario,
+            ).order_by(
+                func.sum(ExtratoPonto.pontos).desc(),
+                Usuario.usuario.asc(),
+            ).limit(100).all()
+
+        def ranking_desmanche():
+            consulta = db.session.query(
+                Usuario.usuario,
+                func.count(Desmanche.id).label("total"),
+            ).join(
+                Desmanche,
+                Desmanche.usuario_id == Usuario.id,
+            )
+
+            if inicio_periodo is not None:
+                consulta = consulta.filter(
+                    Desmanche.data_hora >= inicio_periodo
+                )
+
+            return consulta.group_by(
+                Usuario.id,
+                Usuario.usuario,
+            ).order_by(
+                func.count(Desmanche.id).desc(),
+                Usuario.usuario.asc(),
+            ).limit(100).all()
+
+        rankings = {
+            "lavagem": ranking_lavagem(),
+            "acao": ranking_acao(),
+            "desmanche": ranking_desmanche(),
+        }
+
+        ranking_rows = rankings[categoria]
+
+        top_lavagem = rankings["lavagem"][0] if rankings["lavagem"] else None
+        top_acao = rankings["acao"][0] if rankings["acao"] else None
+        top_desmanche = rankings["desmanche"][0] if rankings["desmanche"] else None
 
         return render_template(
             "ranking.html",
             ranking=ranking_rows,
             categoria=categoria,
             periodo=periodo,
+            top_lavagem=top_lavagem,
+            top_acao=top_acao,
+            top_desmanche=top_desmanche,
         )
 
     @app.route("/historico-geral")
