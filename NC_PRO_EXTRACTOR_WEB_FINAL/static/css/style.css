@@ -784,3 +784,31 @@ td {
 
 
 }
+/* ===== CHINA PRO NEON UI 2026 ===== */
+body.login-body{
+    position:relative;
+    min-height:100vh;
+    background:#070407 url('/static/img/china-login-bg.jpg') center/cover no-repeat fixed;
+    overflow:auto;
+}
+body.login-body::before{
+    content:""; position:fixed; inset:0; z-index:0;
+    background:linear-gradient(90deg,rgba(3,2,4,.32),rgba(3,2,4,.08) 35%,rgba(3,2,4,.08) 65%,rgba(3,2,4,.32));
+    pointer-events:none;
+}
+.login-container,.assinatura-login{position:relative;z-index:2}
+.china-login-box{
+    width:min(430px,calc(100vw - 32px)); padding:26px 32px 30px;
+    background:linear-gradient(180deg,rgba(13,8,13,.88),rgba(8,5,9,.94));
+    border:1px solid rgba(255,45,137,.55); border-radius:18px;
+    box-shadow:0 24px 80px rgba(0,0,0,.65),0 0 35px rgba(255,31,125,.18);
+    backdrop-filter:blur(12px);
+}
+.china-login-logo{width:112px;height:112px;object-fit:cover;border-radius:50%;border:2px solid #ff2d89;box-shadow:0 0 26px rgba(255,45,137,.45);margin-bottom:10px}
+.china-login-box h1{font-size:36px;letter-spacing:3px}.china-login-box h1 span{color:#ff2d89}
+.china-login-box .subtitulo{font-size:13px;margin:7px 0 22px;color:#d7c3cf}
+.china-login-box input{background:rgba(7,5,8,.82);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff}
+.china-login-box input:focus{border-color:#ff2d89;box-shadow:0 0 0 3px rgba(255,45,137,.12)}
+.china-login-box button{background:linear-gradient(90deg,#b70d58,#ff2d89,#b70d58);border-radius:10px;box-shadow:0 8px 26px rgba(255,45,137,.22)}
+.china-login-box .cadastro{color:#ff5ba1}
+@media(max-width:700px){body.login-body{background-position:center}.china-login-box{padding:22px}.china-login-logo{width:88px;height:88px}}
