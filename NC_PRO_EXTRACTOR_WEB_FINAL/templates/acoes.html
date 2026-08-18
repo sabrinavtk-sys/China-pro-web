@@ -1,63 +1,57 @@
 {% extends "base_gestao.html" %}
-{% block title %}Ações — ChinaPRO{% endblock %}
+{% block title %}Ações — China PRO{% endblock %}
+{% block page_heading %}Ações{% endblock %}
 {% block content %}
-<header class="top"><div><span class="kicker">REGISTRO OBRIGATÓRIO</span><h1>🔫 Ação</h1><p class="muted">O print final é obrigatório, validado no navegador e descartado após o registro.</p></div></header>
-
-<section class="grid two">
-<form id="formAcao" class="card">
-  <label>Tipo de ação</label>
-  <select id="tipoAcao" required>{% for tipo in tipos %}<option>{{ tipo }}</option>{% endfor %}</select>
-
-  <label>Data e hora</label>
-  <input id="dataAcao" type="datetime-local" required>
-
-  <label>Participantes + cargos</label>
-  <textarea id="participantes" placeholder="Um por linha. Ex.:&#10;Sabrina | Soldado&#10;Henrique | Tenente de Rua" required></textarea>
-
-  <label>Responsável oficial</label>
-  <input id="responsavel" placeholder="Pode deixar vazio para sugerir pelo cargo mais alto">
-
-  <label>Resumo do ocorrido</label>
-  <textarea id="resumo" required></textarea>
-
-  <label>Resultado</label>
-  <select id="resultado" required><option>Vitória</option><option>Derrota</option></select>
-
-  <label>Lucro obtido</label>
-  <textarea id="lucro" placeholder='Ex.: AK, munição 7.62, dinheiro. Se não houver: "Nada"'>Nada</textarea>
-
-  <div class="proof">
-    <label>📸 Print final da ação — obrigatório</label>
-    <input id="provaAcao" type="file" accept="image/*" required>
-    <small class="muted">O arquivo não será enviado nem armazenado. O navegador gera somente uma assinatura SHA-256 para validação/duplicidade.</small>
-  </div>
-
-  <div id="pontosPreview" class="notice">Pontos: calculados automaticamente.</div>
-  <div class="actions"><button type="submit">SALVAR AÇÃO</button></div>
-  <div id="statusAcao"></div>
-</form>
-
-<article class="card">
-  <h2>📊 Pontuação automática</h2>
-  <table class="table">
-    <tr><th>Ação</th><th>Vitória</th><th>Derrota</th></tr>
-    <tr><td>Drop</td><td>+3</td><td>+1</td></tr>
-    <tr><td>Lojinha</td><td>+6</td><td>+3</td></tr>
-    <tr><td>Joalheria</td><td>+8</td><td>+3</td></tr>
-    <tr><td>Banco</td><td>+15</td><td>+7</td></tr>
-    <tr><td>Invasão</td><td>+12</td><td>+5</td></tr>
-  </table>
-  <div class="notice">Duplicidade é bloqueada usando usuário + tipo + horário + participantes + resultado + hash do print final.</div>
-</article>
+<section class="page-intro">
+  <div><span class="kicker">REGISTRO OBRIGATÓRIO</span><h2>🔫 Registrar ação</h2><p class="muted">O print final é validado no navegador e descartado após o registro.</p></div>
 </section>
 
-<section class="card" style="margin-top:18px">
-<h2>Últimas ações</h2>
-<div class="list">
-{% for item in ultimas %}
-<div class="item"><div class="row"><b>{{ item.tipo }} — {{ item.resultado }}</b><span class="pill">+{{ item.pontos }} pts</span></div><small>{{ item.data_hora.astimezone().strftime('%d/%m/%Y %H:%M') if item.data_hora else '' }} • {{ item.responsavel }}</small></div>
-{% else %}<p class="muted">Nenhuma ação registrada.</p>{% endfor %}
-</div>
+<section class="content-grid content-grid-2">
+  <form id="formAcao" class="card form-card">
+    <div class="form-grid">
+      <div><label>Tipo de ação</label><select id="tipoAcao" required>{% for tipo in tipos %}<option>{{ tipo }}</option>{% endfor %}</select></div>
+      <div><label>Data e hora</label><input id="dataAcao" type="datetime-local" required></div>
+      <div class="span-2"><label>Participantes + cargos</label><textarea id="participantes" placeholder="Um por linha. Ex.:&#10;Sabrina | Soldado&#10;Henrique | Tenente de Rua" required></textarea></div>
+      <div class="span-2"><label>Responsável oficial</label><input id="responsavel" placeholder="Pode deixar vazio para sugerir pelo cargo mais alto"></div>
+      <div class="span-2"><label>Resumo do ocorrido</label><textarea id="resumo" required></textarea></div>
+      <div><label>Resultado</label><select id="resultado" required><option>Vitória</option><option>Derrota</option></select></div>
+      <div><label>Lucro obtido</label><input id="lucro" value="Nada" placeholder='Ex.: AK, munição 7.62 ou "Nada"'></div>
+    </div>
+
+    <div class="proof">
+      <label>📸 Print final da ação — obrigatório</label>
+      <input id="provaAcao" type="file" accept="image/*" required>
+      <small class="muted">O arquivo não é armazenado; o navegador gera somente uma assinatura para validação.</small>
+    </div>
+
+    <div id="pontosPreview" class="notice">Pontos: calculados automaticamente.</div>
+    <div class="actions"><button type="submit">Salvar ação</button></div>
+    <div id="statusAcao"></div>
+  </form>
+
+  <aside class="card info-card">
+    <div class="section-title"><div><span class="kicker">TABELA</span><h2>📊 Pontuação automática</h2></div></div>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Ação</th><th>Vitória</th><th>Derrota</th></tr></thead>
+      <tbody>
+      <tr><td>Drop</td><td>+3</td><td>+1</td></tr>
+      <tr><td>Lojinha</td><td>+6</td><td>+3</td></tr>
+      <tr><td>Joalheria</td><td>+8</td><td>+3</td></tr>
+      <tr><td>Banco</td><td>+15</td><td>+7</td></tr>
+      <tr><td>Invasão</td><td>+12</td><td>+5</td></tr>
+      </tbody>
+    </table></div>
+    <div class="notice">Registros repetidos são bloqueados automaticamente usando os dados da ação e a assinatura do print.</div>
+  </aside>
+</section>
+
+<section class="card section-block">
+  <div class="section-title"><div><h2>Últimas ações</h2><small class="muted">Seus registros mais recentes</small></div></div>
+  <div class="list">
+  {% for item in ultimas %}
+    <div class="item"><div class="row"><b>{{ item.tipo }} — {{ item.resultado }}</b><span class="pill">+{{ item.pontos }} pts</span></div><small>{{ item.data_hora.astimezone().strftime('%d/%m/%Y %H:%M') if item.data_hora else '' }} • {{ item.responsavel }}</small></div>
+  {% else %}<div class="empty-state">Nenhuma ação registrada ainda.</div>{% endfor %}
+  </div>
 </section>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='js/acoes.js') }}?v=1"></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/acoes.js') }}?v=2"></script>{% endblock %}

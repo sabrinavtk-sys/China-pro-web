@@ -1,0 +1,169 @@
+
+/* CHINA PRO — BASE FUNCIONAL PADRONIZADA
+   Corrige conflito entre shell grid + sidebar fixed. */
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#08080c;color:#f7f4f7}
+body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
+.china-app .shell{display:block!important;width:100%!important;min-height:100vh!important;background:#08080c!important}
+.china-app .side{
+  position:fixed!important;left:0!important;top:0!important;bottom:0!important;
+  width:230px!important;height:100vh!important;padding:20px 14px!important;
+  overflow-y:auto!important;background:#0a090d!important;border-right:1px solid #261b22!important;z-index:50!important
+}
+.china-app .brand{display:flex!important;align-items:center!important;gap:10px!important;text-decoration:none!important;margin:0 4px 22px!important}
+.china-app .brand:before{content:"";width:48px;height:48px;border-radius:50%;background:url('/static/img/china-logo-user-web.jpg') center/cover no-repeat;border:1px solid #6f2a42;flex:0 0 auto}
+.china-app .brand b{display:block;color:#fff!important;font-size:17px!important;font-style:italic}
+.china-app .brand small{display:block;color:#f05488!important;font-size:9px!important;letter-spacing:.13em;margin-top:3px}
+.china-app .side nav{display:grid!important;gap:6px!important}
+.china-app .side nav a{min-height:44px!important;padding:10px 12px!important;border-radius:10px!important;display:flex!important;align-items:center!important;gap:10px!important;color:#aaa2aa!important;text-decoration:none!important;font-size:12px!important;font-weight:750!important;border:1px solid transparent!important}
+.china-app .side nav a:hover,.china-app .side nav a.active{color:#fff!important;background:linear-gradient(90deg,#681631,#281017)!important;border-color:#68233d!important}
+.china-app .main{
+  display:block!important;min-width:0!important;max-width:none!important;
+  margin:0 0 0 230px!important;width:calc(100vw - 230px)!important;
+  padding:24px clamp(18px,2.4vw,36px) 50px!important
+}
+.china-app .app-topbar{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:20px!important;min-height:72px!important;border-bottom:1px solid #251b21!important;margin-bottom:22px!important;padding-bottom:14px!important}
+.china-app .app-topbar h1{font-size:27px!important;line-height:1.1!important;margin:3px 0 0!important;color:#fff!important}
+.china-app .china-kicker,.china-app .kicker{display:block;color:#ff4b85!important;font-size:10px!important;font-weight:900!important;letter-spacing:.13em!important;text-transform:uppercase}
+.china-app .app-profile{display:flex;align-items:center;gap:10px;min-width:0}
+.china-app .china-profile-img{width:42px!important;height:42px!important;border-radius:50%!important;object-fit:cover!important;border:1px solid #762743!important}
+.china-app .app-profile b{display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.china-app .app-profile small{display:block;color:#938991;font-size:10px;margin-top:2px}
+
+.china-app .page-intro{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:18px!important;margin:0 0 18px!important;min-width:0!important}
+.china-app .page-intro h2{margin:4px 0!important;font-size:26px!important;line-height:1.15!important;overflow-wrap:normal!important}
+.china-app .page-intro p{margin:0!important;max-width:760px!important;line-height:1.5!important}
+.china-app .muted{color:#a69ca4!important}
+
+.china-app .card,.china-app .form-card,.china-app .info-card{
+  min-width:0!important;width:auto!important;max-width:none!important;height:auto!important;
+  padding:20px!important;border:1px solid rgba(238,37,109,.16)!important;border-radius:14px!important;
+  background:linear-gradient(150deg,#141219,#0c0b0f)!important;box-shadow:0 16px 45px rgba(0,0,0,.24)!important;
+  overflow:visible!important
+}
+.china-app .card h2{font-size:18px!important;line-height:1.25!important;margin:0 0 14px!important;word-break:normal!important}
+.china-app .content-grid{display:grid!important;gap:16px!important;align-items:start!important;width:100%!important;min-width:0!important}
+.china-app .content-grid-2{grid-template-columns:minmax(0,1.45fr) minmax(340px,.8fr)!important}
+.china-app .grid{display:grid!important;gap:14px!important;width:100%!important;min-width:0!important}
+.china-app .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.china-app .grid.three{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.china-app .stats-grid{display:grid!important;gap:14px!important;width:100%!important;min-width:0!important}
+.china-app .stats-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.china-app .stats-grid-4{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.china-app .standard-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.china-app .stat{min-height:118px!important;display:flex!important;flex-direction:column!important;justify-content:center!important}
+.china-app .stat span{color:#9f949c!important;font-size:10px!important;text-transform:uppercase!important;letter-spacing:.08em!important}
+.china-app .stat strong{font-size:29px!important;line-height:1.05!important;margin-top:8px!important;overflow-wrap:anywhere!important}
+.china-app .stat .stat-cargo{font-size:18px!important}
+.china-app .money-stat{font-size:clamp(18px,2vw,26px)!important}
+
+.china-app .form-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0 14px!important}
+.china-app .span-2{grid-column:1/-1!important}
+.china-app label{display:block!important;margin:12px 0 6px!important;font-size:11px!important;font-weight:800!important;color:#d8d0d5!important}
+.china-app input,.china-app select,.china-app textarea{display:block!important;width:100%!important;min-width:0!important;min-height:44px!important;padding:11px 12px!important;border:1px solid #33262e!important;border-radius:9px!important;background:#0b0b0f!important;color:#fff!important;font-size:13px!important;outline:none!important}
+.china-app textarea{min-height:112px!important;resize:vertical!important}
+.china-app input:focus,.china-app select:focus,.china-app textarea:focus{border-color:#e62a67!important;box-shadow:0 0 0 3px rgba(230,42,103,.08)!important}
+.china-app .proof,.china-app .notice{margin-top:14px!important;padding:13px!important;border:1px solid #35232d!important;border-radius:10px!important;background:#0e0d11!important;line-height:1.5!important}
+.china-app .notice.success{border-color:rgba(55,211,151,.3)!important;color:#74e0b7!important}
+.china-app .actions{display:flex!important;gap:9px!important;flex-wrap:wrap!important;margin-top:14px!important}
+.china-app button,.china-app .btn{min-height:44px!important;min-width:44px!important;padding:10px 16px!important;border:1px solid #f2447d!important;border-radius:9px!important;background:linear-gradient(90deg,#c81750,#ef2e70)!important;color:#fff!important;text-decoration:none!important;font-size:12px!important;font-weight:850!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important}
+.china-app .btn.secondary{background:#111014!important;border-color:#31242c!important;color:#c4bbc1!important}
+.china-app .btn-small{min-height:36px!important;padding:7px 11px!important}
+.china-app button:focus-visible,.china-app .btn:focus-visible,.china-app a:focus-visible,.china-app input:focus-visible,.china-app select:focus-visible,.china-app textarea:focus-visible{outline:3px solid rgba(255,83,145,.42)!important;outline-offset:2px!important}
+
+.china-app .section-block{margin-top:16px!important}
+.china-app .section-title{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:12px!important;margin:0 0 13px!important;min-height:36px!important}
+.china-app .section-title h2{margin:0!important}
+.china-app .list{display:grid!important;gap:9px!important}
+.china-app .list .item{padding:12px 13px!important;border:1px solid #251d22!important;border-radius:10px!important;background:#0d0c10!important;min-width:0!important}
+.china-app .row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;min-width:0!important}
+.china-app .row b{min-width:0!important;overflow-wrap:anywhere!important}
+.china-app .pill{flex:0 0 auto!important;padding:5px 8px!important;border:1px solid rgba(238,37,109,.25)!important;border-radius:999px!important;background:rgba(238,37,109,.08)!important;color:#ff75a2!important;font-size:10px!important;font-weight:800!important}
+.china-app .empty-state{width:100%!important;padding:24px!important;text-align:center!important;color:#8f858c!important;border:1px dashed #30242b!important;border-radius:11px!important;background:#0c0b0e!important}
+.china-app .stack{display:grid!important;gap:16px!important}
+
+.china-app .table-wrap{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important}
+.china-app .table{width:100%!important;min-width:620px!important;border-collapse:collapse!important}
+.china-app .table th{padding:11px!important;text-align:left!important;border-bottom:1px solid #2a2027!important;color:#9b9098!important;font-size:10px!important;text-transform:uppercase!important;letter-spacing:.06em!important}
+.china-app .table td{padding:12px 11px!important;border-bottom:1px solid #201a1f!important;vertical-align:middle!important}
+.china-app .gold{color:#ffc85a!important}
+
+.china-app .record-preview{padding:16px!important;border:1px solid #2b2026!important;border-radius:11px!important;background:#0c0b0e!important}
+.china-app .record-preview b{display:block!important;color:#fff!important;margin-bottom:12px!important}
+.china-app .record-preview p{display:grid!important;grid-template-columns:140px 1fr!important;gap:12px!important;margin:8px 0!important;line-height:1.4!important}
+.china-app .record-preview p span{color:#958b92!important}
+.china-app pre{white-space:pre-wrap!important;word-break:normal!important;overflow-wrap:break-word!important;max-width:100%!important}
+
+.china-app .search-grid{display:grid!important;grid-template-columns:190px minmax(260px,1fr) auto!important;gap:12px!important;align-items:end!important}
+.china-app .search-grid label{margin-top:0!important}
+.china-app .search-action{display:flex!important}
+.china-app .search-action button{width:100%!important}
+.china-app .history-grid{display:grid!important;gap:10px!important}
+.china-app .history-card{display:grid!important;grid-template-columns:42px minmax(0,1fr)!important;gap:12px!important;padding:13px!important;border:1px solid #281e24!important;border-radius:11px!important;background:#0d0c10!important;min-width:0!important}
+.china-app .history-icon{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;background:rgba(238,37,109,.08);border:1px solid rgba(238,37,109,.18)}
+.china-app .history-content{min-width:0!important}
+.china-app .history-content p{margin:6px 0 0!important;color:#aaa0a7!important;line-height:1.45!important;overflow-wrap:anywhere!important}
+
+.china-app .quick-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:11px!important}
+.china-app .quick-card{min-width:0!important;min-height:108px!important;padding:16px!important;border:1px solid #2c2027!important;border-radius:11px!important;background:#0e0d11!important;text-decoration:none!important;color:#fff!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:4px!important}
+.china-app .quick-card:hover{border-color:#7a2946!important;background:#151016!important}
+.china-app .quick-icon{font-size:22px!important}
+.china-app .quick-card small{color:#958b92!important}
+
+.china-app .progress{height:10px!important;border-radius:999px!important;background:#242027!important;overflow:hidden!important}
+.china-app .progress>div{height:100%!important;background:linear-gradient(90deg,#e51e61,#ff4d8d)!important}
+.china-app .metric-line{display:flex!important;justify-content:space-between!important;gap:12px!important;margin-bottom:9px!important}
+.china-app .ranking-top{text-align:center!important;align-items:center!important}
+.china-app .ranking-medal{font-size:27px!important}
+.china-app .ranking-top b{color:#ffc85a!important}
+.china-app .ranking-period,.china-app .category-tabs{display:flex!important;gap:8px!important;flex-wrap:wrap!important}
+.china-app .ranking-top-grid{margin-bottom:14px!important}
+
+.china-app .check-row{display:flex!important;align-items:center!important;gap:10px!important;padding:12px!important;border:1px solid #2b2127!important;border-radius:10px!important;background:#0d0c10!important}
+.china-app .check-row input{width:18px!important;height:18px!important;min-height:0!important;flex:0 0 auto!important}
+.china-app .role-summary{display:grid!important;gap:10px!important}
+.china-app .role-summary>div{padding:14px!important;border:1px solid #2a2026!important;border-radius:10px!important;background:#0d0c10!important}
+.china-app .role-summary p{margin:6px 0 0!important;color:#9f959c!important;line-height:1.5!important}
+.china-app .choice-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:9px!important}
+.china-app .choice{margin:0!important}
+.china-app .choice input{position:absolute!important;opacity:0!important;pointer-events:none!important}
+.china-app .choice span{display:flex!important;align-items:center!important;justify-content:center!important;min-height:44px!important;border:1px solid #33262e!important;border-radius:9px!important;background:#0d0c10!important}
+.china-app .choice input:checked+span{border-color:#e42a68!important;background:rgba(228,42,104,.11)!important}
+.china-app .mini-stats>div{padding:13px!important;border:1px solid #2b2127!important;border-radius:10px!important;background:#0d0c10!important}
+.china-app .mini-stats span{display:block!important;color:#958b92!important;font-size:10px!important;text-transform:uppercase!important}
+.china-app .mini-stats strong{display:block!important;margin-top:5px!important;font-size:16px!important;overflow-wrap:anywhere!important}
+
+@media(max-width:1100px){
+  .china-app .content-grid-2{grid-template-columns:1fr!important}
+  .china-app .stats-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .china-app .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:900px){
+  .china-app .side{width:78px!important;padding:18px 9px!important}
+  .china-app .brand div,.china-app .side nav a span{display:none!important}
+  .china-app .brand{justify-content:center!important;margin-left:0!important;margin-right:0!important}
+  .china-app .brand:before{width:46px!important;height:46px!important}
+  .china-app .side nav a{justify-content:center!important;font-size:17px!important}
+  .china-app .main{margin-left:78px!important;width:calc(100vw - 78px)!important;padding:20px 18px 44px!important}
+}
+@media(max-width:700px){
+  .china-app .side{position:relative!important;width:100%!important;height:auto!important;inset:auto!important;padding:10px!important;overflow:visible!important}
+  .china-app .brand{display:none!important}
+  .china-app .side nav{display:flex!important;overflow-x:auto!important;gap:7px!important;margin:0!important;padding-bottom:2px!important}
+  .china-app .side nav a{flex:0 0 auto!important;font-size:16px!important}
+  .china-app .side nav a span{display:inline!important;font-size:11px!important}
+  .china-app .main{margin-left:0!important;width:100%!important;padding:16px 13px 36px!important}
+  .china-app .app-topbar{min-height:58px!important}
+  .china-app .app-topbar h1{font-size:22px!important}
+  .china-app .app-profile div{display:none!important}
+  .china-app .page-intro{align-items:flex-start!important;flex-direction:column!important}
+  .china-app .grid.two,.china-app .grid.three,.china-app .standard-stats,.china-app .stats-grid-3,.china-app .stats-grid-4{grid-template-columns:1fr!important}
+  .china-app .quick-grid,.china-app .form-grid{grid-template-columns:1fr!important}
+  .china-app .span-2{grid-column:auto!important}
+  .china-app .search-grid{grid-template-columns:1fr!important}
+  .china-app .record-preview p{grid-template-columns:1fr!important;gap:2px!important}
+  .china-app .row{align-items:flex-start!important;flex-direction:column!important}
+  .china-app .pill{align-self:flex-start!important}
+  .china-app .actions>.btn,.china-app .actions>button{flex:1 1 100%!important}
+  .china-app .choice-grid{grid-template-columns:1fr!important}
+}

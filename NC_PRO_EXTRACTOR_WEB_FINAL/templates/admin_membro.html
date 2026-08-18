@@ -1,79 +1,33 @@
 {% extends "base_gestao.html" %}
 {% block title %}Membro — {{ membro.usuario }}{% endblock %}
+{% block page_heading %}Detalhe do Membro{% endblock %}
 {% block content %}
-<header class="top">
-  <div>
-    <span class="kicker">DETALHE DO MEMBRO</span>
-    <h1>👤 {{ membro.usuario }}</h1>
-    <p class="muted">Visão administrativa completa do membro.</p>
-  </div>
-  <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">← Voltar</a>
-</header>
+<section class="page-intro">
+  <div><span class="kicker">ADMINISTRAÇÃO</span><h2>👤 {{ membro.usuario }}</h2><p class="muted">Visão completa de atividade, cargo e pontuação.</p></div>
+  <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">← Voltar aos membros</a>
+</section>
 
-<section class="grid three">
+<section class="stats-grid stats-grid-3">
   <article class="card stat"><span>Pontos Ação</span><strong>{{ pontos_acao }}</strong></article>
   <article class="card stat"><span>Pontos Lavagem</span><strong>{{ pontos_lavagem }}</strong></article>
-  <article class="card stat">
-    <span>Cargo</span>
-    <strong style="font-size:20px">
-      {% if perfil and perfil.setor_acao and perfil.cargo_acao %}
-        {{ perfil.cargo_acao }}
-      {% else %}
-        {{ membro.cargo }}
-      {% endif %}
-    </strong>
-  </article>
+  <article class="card stat"><span>Cargo</span><strong class="stat-cargo">{% if perfil and perfil.setor_acao and perfil.cargo_acao %}{{ perfil.cargo_acao }}{% else %}{{ membro.cargo }}{% endif %}</strong></article>
 </section>
 
-<section class="grid two" style="margin-top:18px">
-  <article class="card">
-    <h2>💰 Últimas Lavagens</h2>
-    <div class="list">
-    {% for op in lavagens %}
-      <div class="item">
-        <div class="row"><b>{{ op.nome_jogador }} #{{ op.id_jogador }}</b><span class="pill">{{ abs(op.porcentagem|float)|round|int }}%</span></div>
-        <small>R$ {{ "{:,.2f}".format(op.valor).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
-      </div>
-    {% else %}<p class="muted">Sem lavagens.</p>{% endfor %}
-    </div>
-  </article>
+<section class="content-grid content-grid-2 section-block">
+  <article class="card"><div class="section-title"><h2>💰 Últimas Lavagens</h2></div><div class="list">
+  {% for op in lavagens %}<div class="item"><div class="row"><b>{{ op.nome_jogador }} #{{ op.id_jogador }}</b><span class="pill">{{ abs(op.porcentagem|float)|round|int }}%</span></div><small>R$ {{ "{:,.2f}".format(op.valor).replace(",", "X").replace(".", ",").replace("X", ".") }}</small></div>
+  {% else %}<div class="empty-state">Sem lavagens.</div>{% endfor %}</div></article>
 
-  <article class="card">
-    <h2>🔫 Últimas Ações</h2>
-    <div class="list">
-    {% for acao in acoes %}
-      <div class="item">
-        <div class="row"><b>{{ acao.tipo }} — {{ acao.resultado }}</b><span class="pill">+{{ acao.pontos }} pts</span></div>
-        <small>{{ acao.responsavel }}</small>
-      </div>
-    {% else %}<p class="muted">Sem ações.</p>{% endfor %}
-    </div>
-  </article>
-</section>
+  <article class="card"><div class="section-title"><h2>🔫 Últimas Ações</h2></div><div class="list">
+  {% for acao in acoes %}<div class="item"><div class="row"><b>{{ acao.tipo }} — {{ acao.resultado }}</b><span class="pill">+{{ acao.pontos }} pts</span></div><small>{{ acao.responsavel }}</small></div>
+  {% else %}<div class="empty-state">Sem ações.</div>{% endfor %}</div></article>
 
-<section class="grid two" style="margin-top:18px">
-  <article class="card">
-    <h2>🚗 Últimos Desmanches</h2>
-    <div class="list">
-    {% for item in desmanches %}
-      <div class="item">
-        <div class="row"><b>{{ item.modelo }}</b><span class="pill">+{{ item.pontos }} {{ item.destino_pontos }}</span></div>
-        <small>R$ {{ "{:,.2f}".format(item.quantidade).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
-      </div>
-    {% else %}<p class="muted">Sem desmanches.</p>{% endfor %}
-    </div>
-  </article>
+  <article class="card"><div class="section-title"><h2>🚗 Últimos Desmanches</h2></div><div class="list">
+  {% for item in desmanches %}<div class="item"><div class="row"><b>{{ item.modelo }}</b><span class="pill">+{{ item.pontos }} {{ item.destino_pontos }}</span></div><small>R$ {{ "{:,.2f}".format(item.quantidade).replace(",", "X").replace(".", ",").replace("X", ".") }}</small></div>
+  {% else %}<div class="empty-state">Sem desmanches.</div>{% endfor %}</div></article>
 
-  <article class="card">
-    <h2>📜 Extrato de Pontos</h2>
-    <div class="list">
-    {% for item in extrato %}
-      <div class="item">
-        <div class="row"><b>{{ item.descricao }}</b><span class="pill">+{{ item.pontos }}</span></div>
-        <small>{{ item.categoria }}</small>
-      </div>
-    {% else %}<p class="muted">Sem pontos registrados.</p>{% endfor %}
-    </div>
-  </article>
+  <article class="card"><div class="section-title"><h2>📜 Extrato de Pontos</h2></div><div class="list">
+  {% for item in extrato %}<div class="item"><div class="row"><b>{{ item.descricao }}</b><span class="pill">+{{ item.pontos }}</span></div><small>{{ item.categoria }}</small></div>
+  {% else %}<div class="empty-state">Sem pontos registrados.</div>{% endfor %}</div></article>
 </section>
 {% endblock %}
