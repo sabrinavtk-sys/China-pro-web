@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}ChinaPRO{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gestao.css') }}?v=2">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">China<b>PRO</b><br><small class="muted">GESTÃO COMPLETA</small></div>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+      <a href="{{ url_for('gestao') }}">🧭 Gestão</a>
+      <a href="{{ url_for('acoes') }}">🔫 Ações</a>
+      <a href="{{ url_for('desmanches') }}">🚗 Desmanches</a>
+      <a href="{{ url_for('ranking') }}">🏆 Ranking</a>
+      <a href="{{ url_for('historico_geral') }}">🗂️ Histórico Geral</a>
+      <a href="{{ url_for('historico') }}">💰 Histórico Lavagem</a>
+      <a href="{{ url_for('perfil_setores') }}">👤 Setores e Cargos</a>
+      <a href="{{ url_for('configuracoes') }}">⚙️ Configurações</a>
+      <a href="{{ url_for('logout') }}">🚪 Sair</a>
+    </nav>
+  </aside>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    console.log("OCR.JS v56 CARREGADO");
+    console.log("OCR.JS v57 CARREGADO");
 
     // =========================================================
     // ESTADO PRIVADO
@@ -593,48 +593,108 @@
                 arquivo
             );
 
+        /*
+            O balão verde fica no canto superior esquerdo.
+            Fazemos várias leituras do MESMO local sem jamais
+            incluir o saldo do canto superior direito.
+        */
         const configuracoes = [
             {
-                nome: "ENVIO BALÃO VERDE - CINZA",
+                nome: "ENVIO VERDE RAW PSM6",
                 x: 0.005,
-                y: 0.075,
+                y: 0.095,
+                largura: 0.31,
+                altura: 0.14,
+                escala: 5.0,
+                filtro: "nenhum",
+                psm: "6"
+            },
+            {
+                nome: "ENVIO VERDE RAW PSM11",
+                x: 0.005,
+                y: 0.095,
+                largura: 0.31,
+                altura: 0.14,
+                escala: 5.0,
+                filtro: "nenhum",
+                psm: "11"
+            },
+            {
+                nome: "ENVIO VERDE CINZA PSM6",
+                x: 0.005,
+                y: 0.085,
                 largura: 0.34,
                 altura: 0.18,
-                escala: 4.2,
+                escala: 5.2,
                 filtro: "cinza",
                 psm: "6"
             },
             {
-                nome: "ENVIO BALÃO VERDE - BINÁRIO 135",
+                nome: "ENVIO VERDE CINZA PSM11",
                 x: 0.005,
-                y: 0.075,
+                y: 0.085,
                 largura: 0.34,
                 altura: 0.18,
-                escala: 4.5,
+                escala: 5.2,
+                filtro: "cinza",
+                psm: "11"
+            },
+            {
+                nome: "ENVIO VERDE BINARIO 120",
+                x: 0.005,
+                y: 0.085,
+                largura: 0.34,
+                altura: 0.18,
+                escala: 5.5,
                 filtro: "binario",
-                limiar: 135,
+                limiar: 120,
                 psm: "6"
             },
             {
-                nome: "ENVIO BALÃO VERDE - BINÁRIO 165",
+                nome: "ENVIO VERDE BINARIO 150",
                 x: 0.005,
-                y: 0.075,
+                y: 0.085,
                 largura: 0.34,
                 altura: 0.18,
-                escala: 4.5,
+                escala: 5.5,
                 filtro: "binario",
-                limiar: 165,
+                limiar: 150,
                 psm: "6"
             },
             {
-                nome: "ENVIO TOPO ESQUERDO AMPLIADO",
+                nome: "ENVIO VERDE BINARIO 180",
+                x: 0.005,
+                y: 0.085,
+                largura: 0.34,
+                altura: 0.18,
+                escala: 5.5,
+                filtro: "binario",
+                limiar: 180,
+                psm: "11"
+            },
+            {
+                /*
+                    Linha específica onde normalmente aparece
+                    "Você enviou R$... para ...".
+                */
+                nome: "ENVIO LINHA DO VALOR",
+                x: 0.012,
+                y: 0.125,
+                largura: 0.29,
+                altura: 0.075,
+                escala: 6.0,
+                filtro: "cinza",
+                psm: "7"
+            },
+            {
+                nome: "ENVIO TOPO ESQUERDO SEGURO",
                 x: 0,
-                y: 0.03,
-                largura: 0.46,
-                altura: 0.30,
-                escala: 3.2,
+                y: 0.05,
+                largura: 0.42,
+                altura: 0.28,
+                escala: 3.6,
                 filtro: "cinza",
-                psm: "6"
+                psm: "11"
             }
         ];
 
@@ -650,13 +710,21 @@
                     configuracao
                 );
 
-            const processado =
-                aplicarFiltro(
-                    clonarCanvas(
-                        recorte
-                    ),
-                    configuracao
+            let processado =
+                clonarCanvas(
+                    recorte
                 );
+
+            if(
+                configuracao.filtro !==
+                "nenhum"
+            ){
+                processado =
+                    aplicarFiltro(
+                        processado,
+                        configuracao
+                    );
+            }
 
             const leitura =
                 await reconhecerTexto(
@@ -686,6 +754,16 @@
                 if(
                     Number(valorDetectado) > 0
                 ){
+                    console.log(
+                        "ENVIO CONFIRMADO NO RECORTE:",
+                        {
+                            valor:
+                                valorDetectado,
+                            leitura:
+                                configuracao.nome
+                        }
+                    );
+
                     return {
                         nome:
                             configuracao.nome,
@@ -698,28 +776,65 @@
             }
         }
 
+        /*
+            Última tentativa: combina APENAS os textos
+            provenientes da região segura do balão verde.
+        */
+        const textoCombinado =
+            leituras
+            .map(
+                leitura =>
+                    leitura.texto
+            )
+            .filter(Boolean)
+            .join("\n");
+
+        if(
+            typeof window.pegarValorEnvio ===
+            "function"
+        ){
+            const valorCombinado =
+                window.pegarValorEnvio(
+                    textoCombinado
+                );
+
+            if(
+                Number(valorCombinado) > 0
+            ){
+                console.log(
+                    "ENVIO CONFIRMADO NAS LEITURAS COMBINADAS:",
+                    valorCombinado
+                );
+
+                return {
+                    nome:
+                        "ENVIO - CONSENSO BALÃO VERDE",
+                    texto:
+                        textoCombinado,
+                    confianca:
+                        Math.max(
+                            0,
+                            ...leituras.map(
+                                leitura =>
+                                    Number(
+                                        leitura.confianca
+                                    ) || 0
+                            )
+                        )
+                };
+            }
+        }
+
         return {
             nome:
-                "ENVIO - LEITURAS COMBINADAS",
+                "ENVIO - BALÃO VERDE NÃO IDENTIFICADO",
             texto:
-                leituras
-                .map(
-                    leitura =>
-                        leitura.texto
-                )
-                .join("\n"),
+                textoCombinado,
             confianca:
-                Math.max(
-                    0,
-                    ...leituras.map(
-                        leitura =>
-                            Number(
-                                leitura.confianca
-                            ) || 0
-                    )
-                )
+                0
         };
     }
+
     // =========================================================
     // DATA E HORA DO RODAPÉ DO PRINT FINAL
     // Ex.: ID: 768 - 25/07/2026 - 23:41 - PING: ...
@@ -1399,7 +1514,7 @@
             );
 
             console.log(
-                "INICIANDO PROCESSAMENTO OCR v56"
+                "INICIANDO PROCESSAMENTO OCR v57"
             );
 
             console.log(
@@ -1740,6 +1855,6 @@
         limparProcessamentoAnterior;
 
     console.log(
-        "OCR.JS v56 PRONTO"
+        "OCR.JS v57 PRONTO"
     );
 })();

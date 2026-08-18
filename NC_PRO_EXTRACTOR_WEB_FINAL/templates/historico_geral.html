@@ -1,0 +1,17 @@
+{% extends "base_gestao.html" %}
+{% block title %}Histórico Geral — ChinaPRO{% endblock %}
+{% block content %}
+<header class="top"><div><span class="kicker">AUDITORIA</span><h1>🗂️ Histórico Geral</h1><p class="muted">Busca unificada sem carregar imagens pesadas.</p></div></header>
+<form class="filters" method="get" style="margin-bottom:18px">
+<select name="tipo"><option value="todos">Todos</option><option value="lavagem" {% if tipo=='lavagem' %}selected{% endif %}>Lavagens</option><option value="acao" {% if tipo=='acao' %}selected{% endif %}>Ações</option><option value="desmanche" {% if tipo=='desmanche' %}selected{% endif %}>Desmanches</option></select>
+<input name="q" value="{{ q }}" placeholder="Nome, ID, modelo, ação...">
+<button>Pesquisar</button>
+</form>
+<section class="card">
+<div class="list">
+{% for item in itens %}
+<div class="item"><div class="row"><b>{{ item.icone }} {{ item.tipo }} — {{ item.titulo }}</b><span class="pill">{{ item.data.astimezone().strftime('%d/%m/%Y %H:%M') }}</span></div><small>{{ item.detalhe }}</small></div>
+{% else %}<p class="muted">Nenhum registro encontrado.</p>{% endfor %}
+</div>
+</section>
+{% endblock %}

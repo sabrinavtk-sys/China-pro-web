@@ -1,0 +1,40 @@
+{% extends "base_gestao.html" %}
+{% block title %}Gestão — ChinaPRO{% endblock %}
+{% block content %}
+<header class="top">
+  <div><span class="kicker">CENTRAL DE GESTÃO</span><h1>Olá, {{ current_user.usuario }}</h1><p class="muted">Lavagem, Ações, Desmanches e Pontuação no mesmo painel.</p></div>
+  <a class="btn secondary" href="{{ url_for('perfil_setores') }}">⚙️ Setores e cargos</a>
+</header>
+
+<section class="grid three">
+  <article class="card stat"><span>Pontos de Ação • semana</span><strong>{{ pontos_acao }}</strong><small class="muted">Ações + desmanches destinados à Ação</small></article>
+  <article class="card stat"><span>Pontos de Lavagem • semana</span><strong>{{ pontos_lavagem }}</strong><small class="muted">Desmanches destinados à Lavagem</small></article>
+  <article class="card stat"><span>Cargo de Ação</span><strong style="font-size:22px">{{ perfil.cargo_acao or 'Não definido' }}</strong><small class="muted">{{ perfil.impulsos_acao }} impulso(s)</small></article>
+</section>
+
+<section class="grid two" style="margin-top:18px">
+  <article class="card">
+    <h2>🔫 Meta de Ação</h2>
+    {% if perfil.setor_acao and meta_acao %}
+      {% if meta_acao.pontos %}
+      <p><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b></p>
+      <div class="progress"><div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div></div>
+      {% else %}
+      <p class="gold"><b>Meta de pontos não definida para este cargo.</b></p>
+      {% endif %}
+      <p class="muted">Papéis: {{ meta_acao.papeis if meta_acao.papeis is not none else '—' }} • Spray: {{ meta_acao.spray if meta_acao.spray is not none else '—' }} • Dinheiro: R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}</p>
+    {% else %}
+      <p class="muted">Ative o setor de Ação e selecione seu cargo.</p>
+    {% endif %}
+  </article>
+  <article class="card">
+    <h2>⚡ Atalhos</h2>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('acoes') }}">+ Registrar Ação</a>
+      <a class="btn" href="{{ url_for('desmanches') }}">+ Registrar Desmanche</a>
+      <a class="btn secondary" href="{{ url_for('dashboard') }}">Abrir Lavagem/OCR</a>
+    </div>
+    <div class="notice">Os prints são usados apenas durante o registro. Depois, o servidor guarda somente dados e o hash de validação — não a imagem.</div>
+  </article>
+</section>
+{% endblock %}

@@ -580,3 +580,112 @@ class MetaSemanalUsuario(db.Model):
         default=agora_utc,
         onupdate=agora_utc,
     )
+
+# =========================================================
+# GESTÃO COMPLETA — AÇÃO, DESMANCHE E PONTOS
+# =========================================================
+
+class PerfilSetor(db.Model):
+    __tablename__ = "perfis_setor"
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    setor_lavagem = db.Column(db.Boolean, nullable=False, default=True)
+    setor_acao = db.Column(db.Boolean, nullable=False, default=False)
+    cargo_acao = db.Column(db.String(60), nullable=True)
+    impulsos_acao = db.Column(db.Integer, nullable=False, default=0)
+    impulsos_lavagem = db.Column(db.Integer, nullable=False, default=0)
+    atualizado_em = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=agora_utc,
+        onupdate=agora_utc,
+    )
+
+
+class Acao(db.Model):
+    __tablename__ = "acoes"
+
+    __table_args__ = (
+        UniqueConstraint("usuario_id", "fingerprint", name="uq_acao_usuario_fingerprint"),
+        Index("ix_acoes_usuario_data", "usuario_id", "data_hora"),
+        Index("ix_acoes_tipo_resultado", "tipo", "resultado"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tipo = db.Column(db.String(30), nullable=False)
+    data_hora = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    participantes = db.Column(db.Text, nullable=False)
+    responsavel = db.Column(db.String(120), nullable=False)
+    resumo = db.Column(db.Text, nullable=False)
+    resultado = db.Column(db.String(10), nullable=False)
+    lucro = db.Column(db.Text, nullable=False, default="Nada")
+    pontos = db.Column(db.Integer, nullable=False, default=0)
+    prova_hash = db.Column(db.String(64), nullable=False)
+    prova_nome = db.Column(db.String(255), nullable=False)
+    fingerprint = db.Column(db.String(64), nullable=False)
+    criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+
+
+class Desmanche(db.Model):
+    __tablename__ = "desmanches"
+
+    __table_args__ = (
+        UniqueConstraint("usuario_id", "fingerprint", name="uq_desmanche_usuario_fingerprint"),
+        Index("ix_desmanches_usuario_data", "usuario_id", "data_hora"),
+        Index("ix_desmanches_modelo", "modelo"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    modelo = db.Column(db.String(100), nullable=False)
+    data_hora = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    quantidade = db.Column(db.Numeric(18, 2, asdecimal=True), nullable=False, default=Decimal("0.00"))
+    destino_pontos = db.Column(db.String(20), nullable=False)
+    pontos = db.Column(db.Integer, nullable=False)
+    prova_hash = db.Column(db.String(64), nullable=False)
+    prova_nome = db.Column(db.String(255), nullable=False)
+    fingerprint = db.Column(db.String(64), nullable=False)
+    criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+
+
+class ExtratoPonto(db.Model):
+    __tablename__ = "extrato_pontos"
+
+    __table_args__ = (
+        UniqueConstraint("origem_tipo", "origem_id", "categoria", name="uq_ponto_origem_categoria"),
+        Index("ix_pontos_usuario_categoria_data", "usuario_id", "categoria", "criado_em"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    origem_tipo = db.Column(db.String(20), nullable=False)
+    origem_id = db.Column(db.Integer, nullable=False)
+    categoria = db.Column(db.String(20), nullable=False)
+    pontos = db.Column(db.Integer, nullable=False)
+    descricao = db.Column(db.String(255), nullable=False)
+    criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)

@@ -1,0 +1,35 @@
+{% extends "base_gestao.html" %}
+{% block title %}Setores e Cargos — ChinaPRO{% endblock %}
+{% block content %}
+<header class="top"><div><span class="kicker">PERFIL</span><h1>Setores e cargos</h1><p class="muted">Uma conta pode participar de Lavagem, Ação ou dos dois setores.</p></div></header>
+<form method="post" class="card" style="max-width:760px">
+  <h2>Participação</h2>
+  <label><input style="width:auto" type="checkbox" name="setor_lavagem" {% if perfil.setor_lavagem %}checked{% endif %}> 💰 Setor de Lavagem</label>
+  <label><input style="width:auto" type="checkbox" name="setor_acao" {% if perfil.setor_acao %}checked{% endif %}> 🔫 Setor de Ação</label>
+
+  <div class="grid two">
+    <div>
+      <label>Cargo de Ação</label>
+      <select name="cargo_acao">
+        <option value="">Selecione...</option>
+        {% for cargo in cargos_acao %}
+        <option value="{{ cargo }}" {% if perfil.cargo_acao == cargo %}selected{% endif %}>{{ cargo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Impulsos de Ação</label>
+      <select name="impulsos_acao">
+        {% for n in [0,1,2] %}<option value="{{ n }}" {% if perfil.impulsos_acao == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <label>Impulsos de Lavagem</label>
+  <select name="impulsos_lavagem">
+    {% for n in [0,1,2] %}<option value="{{ n }}" {% if perfil.impulsos_lavagem == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+  </select>
+
+  <div class="actions"><button type="submit">Salvar perfil</button><a class="btn secondary" href="{{ url_for('gestao') }}">Voltar</a></div>
+</form>
+{% endblock %}

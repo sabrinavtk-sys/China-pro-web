@@ -1,0 +1,14 @@
+CHINA PRO EXTRACTOR — PUBLICAR NA VERCEL
+
+1. Envie todo o conteúdo desta pasta para a raiz do repositório GitHub.
+2. Aguarde o novo deployment na Vercel.
+3. Confirme que o deployment está Ready / Production.
+4. Abra o site e pressione Ctrl + F5.
+
+Variáveis que devem continuar na Vercel:
+DATABASE_URL
+SECRET_KEY
+HTTPS=1
+
+Não crie outro banco Neon.
+Não é necessário criar outro projeto Vercel.

@@ -1,0 +1,18 @@
+{% extends "base_gestao.html" %}
+{% block title %}Ranking — ChinaPRO{% endblock %}
+{% block content %}
+<header class="top"><div><span class="kicker">PONTUAÇÃO</span><h1>🏆 Ranking</h1><p class="muted">Os pontos são derivados dos registros; não existe contador manual.</p></div></header>
+<div class="filters" style="margin-bottom:16px">
+<a class="btn {% if categoria!='acao' %}secondary{% endif %}" href="?categoria=acao&periodo={{ periodo }}">Ação</a>
+<a class="btn {% if categoria!='lavagem' %}secondary{% endif %}" href="?categoria=lavagem&periodo={{ periodo }}">Lavagem</a>
+<a class="btn {% if periodo!='semana' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=semana">Semana</a>
+<a class="btn {% if periodo!='mes' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=mes">Mês</a>
+<a class="btn {% if periodo!='geral' %}secondary{% endif %}" href="?categoria={{ categoria }}&periodo=geral">Geral</a>
+</div>
+<section class="card">
+<table class="table"><tr><th>#</th><th>Membro</th><th>Pontos</th></tr>
+{% for nome,total in ranking %}<tr><td>{{ loop.index }}</td><td><b>{{ nome }}</b></td><td class="gold"><b>{{ total }}</b></td></tr>
+{% else %}<tr><td colspan="3" class="muted">Ainda não há pontos neste período.</td></tr>{% endfor %}
+</table>
+</section>
+{% endblock %}

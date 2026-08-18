@@ -1,6 +1,69 @@
-# NC PRO EXTRACTOR — Web Final
+# CHINA PRO EXTRACTOR — GESTÃO COMPLETA
 
-Versão web consolidada do NC PRO, com visual premium, PostgreSQL, usuários separados,
-OCR, histórico, relatórios, prints persistentes e progressão semanal por cargo.
+Sistema web completo para Vercel + Neon.
 
-Veja `PUBLICAR.txt` para os três passos de deploy.
+## Módulos
+
+- Lavagem com OCR
+- Porcentagem automática
+- Data e hora lidas do print
+- Relatório em texto
+- Ações com pontuação automática
+- Desmanches
+- Ranking
+- Histórico Geral
+- Histórico de Lavagem
+- Setores e cargos
+- Impulsos
+- Metas
+- Proteção contra duplicidade
+- Extrato de pontos
+
+## Otimização
+
+Os prints usados pelo OCR não são armazenados permanentemente.
+
+Lavagem:
+- O print é processado no navegador.
+- Os dados extraídos são enviados ao servidor.
+- O arquivo original não é salvo no Neon.
+
+Ações:
+- 1 print final obrigatório.
+- O navegador gera SHA-256.
+- O arquivo não é enviado nem salvo.
+- Apenas o hash é usado para validação e duplicidade.
+
+Desmanches:
+- 1 print obrigatório.
+- O navegador gera SHA-256.
+- O arquivo não é enviado nem salvo.
+
+Isso reduz uso do Neon, evita payloads grandes e mantém o sistema leve.
+
+## Pontuação de Ações
+
+- Drop: Vitória +3 / Derrota +1
+- Lojinha: Vitória +6 / Derrota +3
+- Joalheria: Vitória +8 / Derrota +3
+- Banco: Vitória +15 / Derrota +7
+- Invasão: Vitória +12 / Derrota +5
+
+## Desmanches
+
+- Destino Ação: +2 pontos
+- Destino Lavagem: +1 ponto
+
+## Deploy — Vercel + Neon
+
+Envie os arquivos diretamente para a raiz do repositório GitHub.
+
+Na Vercel mantenha:
+
+DATABASE_URL = connection string do Neon
+SECRET_KEY = chave secreta
+HTTPS = 1
+
+A Vercel detecta Flask automaticamente.
+
+As tabelas novas são criadas automaticamente pelo `db.create_all()` na inicialização.

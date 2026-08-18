@@ -1,4 +1,4 @@
-console.log("DASHBOARD.JS v55 CARREGADO");
+console.log("DASHBOARD.JS v61 CARREGADO");
 
 
 // =========================================================
@@ -1321,92 +1321,16 @@ async function salvarComprovante(){
         );
 
 
-        const arquivoEnvio =
-            obterElemento(
-                "printEnvio"
-            )?.files?.[0] ||
-            null;
-
-        const arquivoRecebimento =
-            obterElemento(
-                "printRecebimento"
-            )?.files?.[0] ||
-            null;
-
-        if(
-            !arquivoEnvio ||
-            !arquivoRecebimento
-        ){
-            throw new Error(
-                "Os dois prints precisam continuar selecionados para salvar a operação."
-            );
-        }
-
-        console.log(
-            "PREPARANDO PRINTS PARA SALVAR:",
-            {
-                envio: {
-                    nome: arquivoEnvio.name,
-                    tamanho: arquivoEnvio.size,
-                    tipo: arquivoEnvio.type
-                },
-                recebimento: {
-                    nome: arquivoRecebimento.name,
-                    tamanho: arquivoRecebimento.size,
-                    tipo: arquivoRecebimento.type
-                }
-            }
-        );
-
-        const [
-            printEnvioBase64,
-            printRecebimentoBase64
-        ] =
-        await Promise.all([
-            arquivoParaDataURL(
-                arquivoEnvio
-            ),
-            arquivoParaDataURL(
-                arquivoRecebimento
-            )
-        ]);
-
+        /*
+            Os prints são usados pelo OCR somente no navegador.
+            Depois do processamento eles NÃO são enviados ao servidor
+            e NÃO ocupam espaço no Neon.
+        */
         dados.print_envio_base64 =
-            printEnvioBase64;
+            null;
 
         dados.print_recebimento_base64 =
-            printRecebimentoBase64;
-
-        const payloadTeste =
-            JSON.stringify(
-                dados
-            );
-
-        const tamanhoPayload =
-            new Blob([
-                payloadTeste
-            ]).size;
-
-        console.log(
-            "PAYLOAD PARA SALVAR:",
-            (
-                tamanhoPayload /
-                1024 /
-                1024
-            ).toFixed(2) +
-            " MB"
-        );
-
-        if(
-            tamanhoPayload >
-            2.0 *
-            1024 *
-            1024
-        ){
-            throw new Error(
-                "Os prints ainda ficaram grandes demais. O salvamento foi bloqueado antes de enviar."
-            );
-        }
+            null;
 
         console.log(
             "SALVANDO OPERAÇÃO:",

@@ -1,4 +1,4 @@
-console.log("PARSER.JS v56 CARREGADO");
+console.log("PARSER.JS v57 CARREGADO");
 
 
 // =========================================================
@@ -296,6 +296,72 @@ function pegarValorEnvio(texto){
 
 
             return valor;
+
+        }
+
+    }
+
+
+    /*
+        FALLBACK SEGURO:
+        Esta função recebe, na v57, somente texto dos recortes
+        do balão verde. Se o Tesseract perder "R$" ou "para",
+        mas ainda enxergar "enviou/sucesso", podemos escolher
+        o maior número monetário do próprio balão.
+
+        IDs pequenos são ignorados (< 1000).
+    */
+    const contextoEnvio =
+        /(?:envi|envl|env1|sucesso|sucess|valor)/i
+        .test(
+            textoLimpo
+        );
+
+
+    if(
+        contextoEnvio
+    ){
+
+        const candidatos =
+            textoLimpo.match(
+                /[\d.,]{4,20}/g
+            ) ||
+            [];
+
+
+        const valores =
+            candidatos
+            .map(
+                bruto =>
+                    converterValor(
+                        corrigirTrechoNumerico(
+                            bruto
+                        )
+                    )
+            )
+            .filter(
+                valor =>
+                    valorMonetarioValido(
+                        valor
+                    )
+            )
+            .sort(
+                (a,b) =>
+                    b - a
+            );
+
+
+        if(
+            valores.length > 0
+        ){
+
+            console.log(
+                "VALOR DE ENVIO POR FALLBACK SEGURO:",
+                valores[0]
+            );
+
+
+            return valores[0];
 
         }
 
@@ -1441,7 +1507,7 @@ function parseOCR(
 
 
     console.log(
-        "PARSER v56 RECEBEU OCR"
+        "PARSER v57 RECEBEU OCR"
     );
 
 
@@ -1659,5 +1725,5 @@ testarParserV42;
 
 
 console.log(
-    "PARSER.JS v56 PRONTO"
+    "PARSER.JS v57 PRONTO"
 );

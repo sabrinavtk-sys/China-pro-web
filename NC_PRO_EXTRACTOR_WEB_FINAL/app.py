@@ -125,11 +125,16 @@ def criar_app():
     # ROTAS
     # =====================================================
 
-    from routes import configurar_rotas
+    from routes import configurar_rotas, configurar_rotas_gestao
 
     configurar_rotas(
         app
     )
+
+    configurar_rotas_gestao(
+        app
+    )
+
 
     # =====================================================
     # BANCO / CACHE
