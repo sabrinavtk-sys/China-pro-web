@@ -76,6 +76,14 @@ class Usuario(
     )
 
 
+    is_admin = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        index=True,
+    )
+
+
     ultimo_login = db.Column(
         db.DateTime(timezone=True),
         nullable=True,

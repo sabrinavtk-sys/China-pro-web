@@ -67,3 +67,15 @@ HTTPS = 1
 A Vercel detecta Flask automaticamente.
 
 As tabelas novas são criadas automaticamente pelo `db.create_all()` na inicialização.
+
+
+## Conta administrativa
+
+Configure na Vercel:
+
+ADMIN_PASSWORD = uma senha forte para o admin
+ADMIN_USER = admin  (opcional; se não informar, será "admin")
+
+No próximo deploy, o sistema cria automaticamente a conta administrativa.
+
+O admin acessa normalmente pela tela de login e verá o menu "Administração".

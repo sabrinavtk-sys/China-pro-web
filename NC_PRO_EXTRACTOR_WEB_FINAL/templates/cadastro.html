@@ -3,71 +3,376 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NC PRO - Criar Conta</title>
+<title>China PRO — Criar Conta</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
 <style>
-.campo-select{width:100%;margin-bottom:14px;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#15101d;color:#fff;outline:none}.campo-select option{background:#15101d;color:#fff}.ajuda-cargo{display:block;color:#9d91aa;font-size:12px;margin:-5px 0 15px;line-height:1.5}
+:root{
+    --rosa:#ff4fd8;
+    --roxo:#8b2cff;
+    --fundo:#0d0712;
+    --card:#1a1022;
+    --card2:#21132b;
+    --linha:rgba(255,255,255,.12);
+    --texto:#fff;
+    --muted:#bca9c8;
+}
+body.login-body{
+    padding:28px 16px 70px;
+    align-items:flex-start;
+}
+.login-container{
+    min-height:calc(100vh - 90px);
+    align-items:center;
+}
+.login-box.cadastro-premium{
+    width:min(760px,100%);
+    padding:34px;
+    text-align:left;
+    background:linear-gradient(145deg,rgba(39,22,49,.95),rgba(24,14,31,.96));
+    box-shadow:0 22px 70px rgba(0,0,0,.45),0 0 55px rgba(255,79,216,.16);
+}
+.cadastro-topo{
+    text-align:center;
+    margin-bottom:24px;
+}
+.cadastro-topo h1{
+    margin:0;
+    font-size:42px;
+    letter-spacing:4px;
+}
+.cadastro-topo p{
+    color:var(--muted);
+    margin-top:8px;
+}
+.bloco-form{
+    background:rgba(255,255,255,.035);
+    border:1px solid var(--linha);
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:16px;
+}
+.bloco-titulo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+}
+.bloco-titulo strong{
+    font-size:15px;
+}
+.bloco-titulo small{
+    color:var(--muted);
+}
+.grid-campos{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+.grid-campos .campo-largo{grid-column:1/-1}
+.login-box input{
+    margin-bottom:0;
+    border:1px solid transparent;
+    background:#120b18;
+}
+.login-box input:focus{
+    border-color:rgba(255,79,216,.7);
+    box-shadow:0 0 0 3px rgba(255,79,216,.1);
+}
+.setor-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:14px;
+}
+.setor-tab{
+    border:1px solid var(--linha)!important;
+    background:#130c19!important;
+    box-shadow:none!important;
+    transform:none!important;
+    font-size:14px!important;
+    padding:13px!important;
+}
+.setor-tab.ativo{
+    background:linear-gradient(90deg,#df34c3,#7933dd)!important;
+    border-color:transparent!important;
+}
+.cargos-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:9px;
+}
+.cargo-card{
+    width:100%;
+    min-height:62px;
+    padding:10px 12px!important;
+    border:1px solid var(--linha)!important;
+    border-radius:12px!important;
+    background:#120b18!important;
+    box-shadow:none!important;
+    transform:none!important;
+    text-align:left;
+    font-size:12px!important;
+    line-height:1.25;
+    position:relative;
+}
+.cargo-card:hover{
+    border-color:rgba(255,79,216,.6)!important;
+    background:#1d1025!important;
+}
+.cargo-card.selecionado{
+    border-color:var(--rosa)!important;
+    background:linear-gradient(135deg,rgba(255,79,216,.23),rgba(139,44,255,.2))!important;
+}
+.cargo-card.selecionado::after{
+    content:"✓";
+    position:absolute;
+    right:9px;
+    top:7px;
+    color:#6fffc9;
+    font-weight:900;
+}
+.cargo-card b{
+    display:block;
+    font-size:13px;
+    margin-bottom:3px;
+}
+.cargo-card small{
+    color:var(--muted);
+    font-size:10px;
+}
+#cargoSelecionadoResumo{
+    margin-top:12px;
+    padding:11px 13px;
+    border-radius:11px;
+    background:#120b18;
+    color:var(--muted);
+    border:1px solid var(--linha);
+    font-size:12px;
+}
+#cargoSelecionadoResumo.ok{
+    color:#dfffee;
+    border-color:rgba(71,231,170,.45);
+    background:rgba(27,119,83,.12);
+}
+.acoes-cadastro{
+    margin-top:18px;
+}
+.login-box .btn-cadastrar{
+    margin-top:0;
+}
+.cadastro{
+    text-align:center;
+}
+.erro{
+    text-align:center;
+}
+.assinatura-login{
+    position:static;
+    margin-top:18px;
+}
+@media(max-width:720px){
+    .login-box.cadastro-premium{padding:22px}
+    .grid-campos{grid-template-columns:1fr}
+    .grid-campos .campo-largo{grid-column:auto}
+    .cargos-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:470px){
+    .cargos-grid{grid-template-columns:1fr}
+    .setor-tabs{grid-template-columns:1fr}
+}
 </style>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-    <script>
-    if("serviceWorker" in navigator){
-      window.addEventListener("load",()=>navigator.serviceWorker.register("/static/sw.js").catch(()=>{}));
-    }
-    </script>
 </head>
 <body class="login-body">
-<div class="login-container"><div class="login-box">
-<h1>NC <span>PRO</span></h1>
-<p class="subtitulo">Criar nova conta</p>
-{% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
-<form method="POST">
-<input type="text" name="usuario" placeholder="Digite seu usuário" required minlength="3">
-<input type="password" name="senha" placeholder="Digite sua senha" required minlength="6">
-<input type="password" name="confirmar_senha" placeholder="Confirme sua senha" required minlength="6">
-<select
-                    name="cargo"
-                    id="cargo"
-                    required
-                >
-                    <option value="">
-                        Selecione seu cargo atual
-                    </option>
 
-                    <optgroup label="💰 CARGOS DE LAVAGEM">
-                        {% for cargo in cargos_lavagem %}
-                        <option value="lavagem:{{ cargo }}">
-                            {{ cargo }}
-                        </option>
-                        {% endfor %}
-                    </optgroup>
+<div class="login-container">
+    <div class="login-box cadastro-premium">
 
-                    <optgroup label="🔫 CARGOS DE AÇÃO">
-                        {% for cargo in cargos_acao %}
-                        <option value="acao:{{ cargo }}">
-                            {{ cargo }}
-                        </option>
-                        {% endfor %}
-                    </optgroup>
+        <div class="cadastro-topo">
+            <h1>CHINA <span>PRO</span></h1>
+            <p>Crie sua conta e selecione o setor/cargo atual.</p>
+        </div>
 
-                </select>
-                <small
-                    style="
-                        display:block;
-                        margin-top:8px;
-                        color:#d9b8e8;
-                        font-size:11px;
-                        line-height:1.4;
-                    "
-                >
-                    Escolha o cargo correspondente ao seu setor atual:
-                    Lavagem ou Ação.
-                </small>
+        {% if erro %}
+        <div class="erro">{{ erro }}</div>
+        {% endif %}
 
-<small class="ajuda-cargo">O cargo define sua meta semanal e pode ser atualizado depois em Configurações.</small>
-<button type="submit">Cadastrar</button>
-</form>
-<a class="cadastro" href="{{ url_for('login') }}">Já tenho uma conta</a>
-</div></div>
-<footer class="assinatura-login">By: Sabrina Moraize &amp; Yure Oliveira</footer>
+        <form method="POST" id="formCadastro">
+
+            <section class="bloco-form">
+                <div class="bloco-titulo">
+                    <strong>👤 Dados da conta</strong>
+                    <small>Etapa 1 de 2</small>
+                </div>
+
+                <div class="grid-campos">
+                    <input
+                        class="campo-largo"
+                        type="text"
+                        name="usuario"
+                        placeholder="Nome de usuário"
+                        required
+                        minlength="3"
+                        autocomplete="username"
+                    >
+
+                    <input
+                        type="password"
+                        name="senha"
+                        placeholder="Senha (mínimo 6 caracteres)"
+                        required
+                        minlength="6"
+                        autocomplete="new-password"
+                    >
+
+                    <input
+                        type="password"
+                        name="confirmar_senha"
+                        placeholder="Confirmar senha"
+                        required
+                        minlength="6"
+                        autocomplete="new-password"
+                    >
+                </div>
+            </section>
+
+            <section class="bloco-form">
+                <div class="bloco-titulo">
+                    <strong>🎯 Setor e cargo</strong>
+                    <small>Etapa 2 de 2</small>
+                </div>
+
+                <input type="hidden" name="cargo" id="cargo" required>
+
+                <div class="setor-tabs">
+                    <button
+                        type="button"
+                        class="setor-tab ativo"
+                        data-setor="lavagem"
+                    >
+                        💰 Lavagem
+                    </button>
+
+                    <button
+                        type="button"
+                        class="setor-tab"
+                        data-setor="acao"
+                    >
+                        🔫 Ação
+                    </button>
+                </div>
+
+                <div id="listaLavagem" class="cargos-grid">
+                    {% for cargo in cargos_lavagem %}
+                    <button
+                        type="button"
+                        class="cargo-card"
+                        data-valor="lavagem:{{ cargo }}"
+                        data-cargo="{{ cargo }}"
+                        data-setor-nome="Lavagem"
+                    >
+                        <b>{{ cargo }}</b>
+                        <small>Setor de Lavagem</small>
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <div id="listaAcao" class="cargos-grid" hidden>
+                    {% for cargo in cargos_acao %}
+                    <button
+                        type="button"
+                        class="cargo-card"
+                        data-valor="acao:{{ cargo }}"
+                        data-cargo="{{ cargo }}"
+                        data-setor-nome="Ação"
+                    >
+                        <b>{{ cargo }}</b>
+                        <small>Setor de Ação</small>
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <div id="cargoSelecionadoResumo">
+                    Nenhum cargo selecionado.
+                </div>
+            </section>
+
+            <div class="acoes-cadastro">
+                <button class="btn-cadastrar" type="submit">
+                    Criar minha conta
+                </button>
+            </div>
+
+        </form>
+
+        <a class="cadastro" href="{{ url_for('login') }}">
+            Já tenho uma conta
+        </a>
+
+    </div>
+</div>
+
+<footer class="assinatura-login">
+    By: Sabrina Moraize &amp; Yure Oliveira
+</footer>
+
+<script>
+(function(){
+    const hiddenCargo = document.getElementById("cargo");
+    const tabs = document.querySelectorAll(".setor-tab");
+    const cards = document.querySelectorAll(".cargo-card");
+    const lavagem = document.getElementById("listaLavagem");
+    const acao = document.getElementById("listaAcao");
+    const resumo = document.getElementById("cargoSelecionadoResumo");
+    const form = document.getElementById("formCadastro");
+
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            tabs.forEach(t => t.classList.remove("ativo"));
+            tab.classList.add("ativo");
+
+            const setor = tab.dataset.setor;
+            lavagem.hidden = setor !== "lavagem";
+            acao.hidden = setor !== "acao";
+        });
+    });
+
+    cards.forEach(card => {
+        card.addEventListener("click", () => {
+            cards.forEach(c => c.classList.remove("selecionado"));
+            card.classList.add("selecionado");
+
+            hiddenCargo.value = card.dataset.valor;
+            resumo.classList.add("ok");
+            resumo.textContent =
+                "Selecionado: " +
+                card.dataset.setorNome +
+                " • " +
+                card.dataset.cargo;
+        });
+    });
+
+    form.addEventListener("submit", (event) => {
+        if(!hiddenCargo.value){
+            event.preventDefault();
+            resumo.classList.remove("ok");
+            resumo.textContent = "Selecione um cargo antes de continuar.";
+            resumo.style.color = "#ff8ca3";
+        }
+    });
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{
+        navigator.serviceWorker
+            .register("/static/sw.js")
+            .catch(()=>{});
+    });
+}
+</script>
+
 </body>
 </html>

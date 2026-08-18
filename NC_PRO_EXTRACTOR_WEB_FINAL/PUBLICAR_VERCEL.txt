@@ -12,3 +12,6 @@ HTTPS=1
 
 Não crie outro banco Neon.
 Não é necessário criar outro projeto Vercel.
+
+ADMIN_PASSWORD = senha forte da conta admin
+ADMIN_USER = admin (opcional)

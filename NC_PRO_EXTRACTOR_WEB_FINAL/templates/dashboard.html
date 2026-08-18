@@ -171,6 +171,17 @@
                 <span class="menu-icone">🗂️</span><span>Histórico Geral</span>
             </a>
 
+
+            {% if current_user.is_admin %}
+            <a
+                href="{{ url_for('admin_dashboard') }}"
+                class="menu-link"
+            >
+                <span class="menu-icone">🛡️</span>
+                <span>Administração</span>
+            </a>
+            {% endif %}
+
             <a
                 href="{{ url_for('configuracoes') }}"
                 class="menu-link"

@@ -1,3 +1,4 @@
+from functools import wraps
 import hashlib
 import re
 import logging
@@ -219,6 +220,19 @@ def resumo_meta_semanal(usuario):
         "fim_exclusivo": fim_local,
         "fim_exibicao": fim_local - timedelta(minutes=1),
     }
+
+
+
+def admin_required(funcao):
+    @wraps(funcao)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("login"))
+        if not getattr(current_user, "is_admin", False):
+            flash("Acesso restrito à administração.", "erro")
+            return redirect(url_for("dashboard"))
+        return funcao(*args, **kwargs)
+    return wrapper
 
 
 def configurar_rotas(app):
@@ -545,6 +559,148 @@ def configurar_rotas(app):
             "meta": progresso["meta"],
             "apto": progresso["apto"],
         }), 201
+
+
+    @app.route("/admin")
+    @login_required
+    @admin_required
+    def admin_dashboard():
+        usuarios = Usuario.query.order_by(
+            Usuario.usuario.asc()
+        ).all()
+
+        membros = []
+
+        for usuario in usuarios:
+            if getattr(usuario, "is_admin", False):
+                continue
+
+            perfil = PerfilSetor.query.filter_by(
+                usuario_id=usuario.id
+            ).first()
+
+            total_lavagens = Operacao.query.filter_by(
+                usuario_id=usuario.id
+            ).count()
+
+            total_acoes = Acao.query.filter_by(
+                usuario_id=usuario.id
+            ).count()
+
+            total_desmanches = Desmanche.query.filter_by(
+                usuario_id=usuario.id
+            ).count()
+
+            pontos_acao = db.session.query(
+                func.coalesce(
+                    func.sum(ExtratoPonto.pontos),
+                    0
+                )
+            ).filter(
+                ExtratoPonto.usuario_id == usuario.id,
+                ExtratoPonto.categoria == "acao",
+            ).scalar()
+
+            pontos_lavagem = db.session.query(
+                func.coalesce(
+                    func.sum(ExtratoPonto.pontos),
+                    0
+                )
+            ).filter(
+                ExtratoPonto.usuario_id == usuario.id,
+                ExtratoPonto.categoria == "lavagem",
+            ).scalar()
+
+            membros.append({
+                "usuario": usuario,
+                "perfil": perfil,
+                "lavagens": total_lavagens,
+                "acoes": total_acoes,
+                "desmanches": total_desmanches,
+                "pontos_acao": int(pontos_acao or 0),
+                "pontos_lavagem": int(pontos_lavagem or 0),
+            })
+
+        total_membros = len(membros)
+        total_acoes_geral = Acao.query.count()
+        total_desmanches_geral = Desmanche.query.count()
+        total_lavagens_geral = Operacao.query.count()
+
+        return render_template(
+            "admin_dashboard.html",
+            membros=membros,
+            total_membros=total_membros,
+            total_acoes_geral=total_acoes_geral,
+            total_desmanches_geral=total_desmanches_geral,
+            total_lavagens_geral=total_lavagens_geral,
+        )
+
+
+    @app.route("/admin/membro/<int:usuario_id>")
+    @login_required
+    @admin_required
+    def admin_membro(usuario_id):
+        usuario = db.session.get(
+            Usuario,
+            usuario_id
+        )
+
+        if usuario is None:
+            flash("Membro não encontrado.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        perfil = PerfilSetor.query.filter_by(
+            usuario_id=usuario.id
+        ).first()
+
+        lavagens = Operacao.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            Operacao.criado_em.desc()
+        ).limit(25).all()
+
+        acoes = Acao.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            Acao.data_hora.desc()
+        ).limit(25).all()
+
+        desmanches = Desmanche.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            Desmanche.data_hora.desc()
+        ).limit(25).all()
+
+        extrato = ExtratoPonto.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            ExtratoPonto.criado_em.desc()
+        ).limit(50).all()
+
+        pontos_acao = sum(
+            item.pontos
+            for item in extrato
+            if item.categoria == "acao"
+        )
+
+        pontos_lavagem = sum(
+            item.pontos
+            for item in extrato
+            if item.categoria == "lavagem"
+        )
+
+        return render_template(
+            "admin_membro.html",
+            membro=usuario,
+            perfil=perfil,
+            lavagens=lavagens,
+            acoes=acoes,
+            desmanches=desmanches,
+            extrato=extrato,
+            pontos_acao=pontos_acao,
+            pontos_lavagem=pontos_lavagem,
+        )
+
 
     @app.route("/reset-semanal", methods=["POST"])
     @login_required
