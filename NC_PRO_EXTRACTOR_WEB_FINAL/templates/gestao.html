@@ -1,40 +1,104 @@
 {% extends "base_gestao.html" %}
 {% block title %}Gestão — ChinaPRO{% endblock %}
 {% block content %}
+
 <header class="top">
-  <div><span class="kicker">CENTRAL DE GESTÃO</span><h1>Olá, {{ current_user.usuario }}</h1><p class="muted">Lavagem, Ações, Desmanches e Pontuação no mesmo painel.</p></div>
+  <div>
+    <span class="kicker">CENTRAL DE GESTÃO</span>
+    <h1>Visão geral</h1>
+    <p class="muted">Tudo que você precisa, separado por setor e com acesso rápido.</p>
+  </div>
   <a class="btn secondary" href="{{ url_for('perfil_setores') }}">⚙️ Setores e cargos</a>
 </header>
 
 <section class="grid three">
-  <article class="card stat"><span>Pontos de Ação • semana</span><strong>{{ pontos_acao }}</strong><small class="muted">Ações + desmanches destinados à Ação</small></article>
-  <article class="card stat"><span>Pontos de Lavagem • semana</span><strong>{{ pontos_lavagem }}</strong><small class="muted">Desmanches destinados à Lavagem</small></article>
-  <article class="card stat"><span>Cargo de Ação</span><strong style="font-size:22px">{{ perfil.cargo_acao or 'Não definido' }}</strong><small class="muted">{{ perfil.impulsos_acao }} impulso(s)</small></article>
+  <article class="card stat">
+    <span>Pontos de Ação</span>
+    <strong>{{ pontos_acao }}</strong>
+    <small class="muted">Acumulados nesta semana</small>
+  </article>
+
+  <article class="card stat">
+    <span>Pontos de Lavagem</span>
+    <strong>{{ pontos_lavagem }}</strong>
+    <small class="muted">Acumulados nesta semana</small>
+  </article>
+
+  <article class="card stat">
+    <span>Cargo atual</span>
+    <strong style="font-size:20px">{{ perfil.cargo_acao or 'Não definido' }}</strong>
+    <small class="muted">{{ perfil.impulsos_acao }} impulso(s)</small>
+  </article>
 </section>
 
-<section class="grid two" style="margin-top:18px">
+<section class="card" style="margin-top:14px">
+  <div class="section-title">
+    <h2>⚡ Acesso rápido</h2>
+    <small class="muted">Escolha o que deseja registrar</small>
+  </div>
+
+  <div class="quick-grid">
+    <a class="quick-card" href="{{ url_for('dashboard') }}">
+      <strong>💰 Nova Lavagem</strong>
+      <small>OCR, cálculo e relatório</small>
+    </a>
+
+    <a class="quick-card" href="{{ url_for('acoes') }}">
+      <strong>🔫 Nova Ação</strong>
+      <small>Resultado, participantes e pontos</small>
+    </a>
+
+    <a class="quick-card" href="{{ url_for('desmanches') }}">
+      <strong>🚗 Novo Desmanche</strong>
+      <small>Modelo, valor e pontuação</small>
+    </a>
+  </div>
+</section>
+
+<section class="grid two" style="margin-top:14px">
   <article class="card">
-    <h2>🔫 Meta de Ação</h2>
+    <div class="section-title">
+      <h2>🎯 Meta de Ação</h2>
+      <span class="pill">{{ perfil.cargo_acao or 'Sem cargo' }}</span>
+    </div>
+
     {% if perfil.setor_acao and meta_acao %}
       {% if meta_acao.pontos %}
-      <p><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b></p>
-      <div class="progress"><div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div></div>
+        <p><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b></p>
+        <div class="progress">
+          <div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div>
+        </div>
       {% else %}
-      <p class="gold"><b>Meta de pontos não definida para este cargo.</b></p>
+        <p class="gold"><b>Meta de pontos não definida para este cargo.</b></p>
       {% endif %}
-      <p class="muted">Papéis: {{ meta_acao.papeis if meta_acao.papeis is not none else '—' }} • Spray: {{ meta_acao.spray if meta_acao.spray is not none else '—' }} • Dinheiro: R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}</p>
+
+      <p class="muted" style="margin-top:12px">
+        Papéis: {{ meta_acao.papeis if meta_acao.papeis is not none else '—' }}
+        • Spray: {{ meta_acao.spray if meta_acao.spray is not none else '—' }}
+        • Dinheiro: R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}
+      </p>
     {% else %}
-      <p class="muted">Ative o setor de Ação e selecione seu cargo.</p>
+      <p class="muted">Ative o setor de Ação e selecione seu cargo para acompanhar a meta.</p>
     {% endif %}
   </article>
+
   <article class="card">
-    <h2>⚡ Atalhos</h2>
-    <div class="actions">
-      <a class="btn" href="{{ url_for('acoes') }}">+ Registrar Ação</a>
-      <a class="btn" href="{{ url_for('desmanches') }}">+ Registrar Desmanche</a>
-      <a class="btn secondary" href="{{ url_for('dashboard') }}">Abrir Lavagem/OCR</a>
+    <div class="section-title">
+      <h2>📌 Atalhos de acompanhamento</h2>
     </div>
-    <div class="notice">Os prints são usados apenas durante o registro. Depois, o servidor guarda somente dados e o hash de validação — não a imagem.</div>
+
+    <div class="actions">
+      <a class="btn secondary" href="{{ url_for('ranking') }}">🏆 Ranking</a>
+      <a class="btn secondary" href="{{ url_for('historico_geral') }}">🗂️ Histórico</a>
+      {% if current_user.is_admin %}
+      <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">🛡️ Administração</a>
+      {% endif %}
+    </div>
+
+    <div class="notice" style="margin-top:14px">
+      Os prints são usados somente durante o registro. Depois, ficam apenas os dados necessários.
+    </div>
   </article>
 </section>
+
 {% endblock %}
