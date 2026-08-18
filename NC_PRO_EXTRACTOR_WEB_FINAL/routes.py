@@ -51,9 +51,12 @@ CARGOS_ACAO_CADASTRO = [
     "Soldado",
     "Capanga",
     "Tenente de Rua",
+]
+
+CARGOS_GERENCIA = [
+    "Sub Gerente",
     "Chefe de Setor",
     "Alto Conselho",
-    "Sub Gerente",
 ]
 
 METAS_ORGANIZACAO = {
@@ -246,7 +249,7 @@ def configurar_rotas(app):
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
         if request.method == "GET":
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO)
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA)
 
         usuario = limpar_texto(request.form.get("usuario"), 50)
         senha = str(request.form.get("senha") or "")
@@ -270,23 +273,29 @@ def configurar_rotas(app):
             if cargo_acao in CARGOS_ACAO_CADASTRO:
                 setor_cadastro = "acao"
 
+        elif cargo_selecionado.startswith("gerencia:"):
+            cargo_acao = cargo_selecionado.split(":", 1)[1].strip()
+            if cargo_acao in CARGOS_GERENCIA:
+                setor_cadastro = "gerencia"
+
         if not usuario or not senha or not confirmar_senha or not setor_cadastro:
             return render_template(
                 "cadastro.html",
                 cargos_lavagem=ORDEM_CARGOS,
                 cargos_acao=CARGOS_ACAO_CADASTRO,
+                cargos_gerencia=CARGOS_GERENCIA,
                 erro="Preencha todos os campos e selecione seu cargo atual.",
             )
         if len(usuario) < 3:
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="O nome de usuário deve possuir pelo menos 3 caracteres.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="O nome de usuário deve possuir pelo menos 3 caracteres.")
         if len(senha) < 6:
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="A senha deve possuir pelo menos 6 caracteres.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="A senha deve possuir pelo menos 6 caracteres.")
         if senha != confirmar_senha:
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="As senhas não coincidem.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="As senhas não coincidem.")
 
         usuario_existente = Usuario.query.filter(func.lower(Usuario.usuario) == usuario.lower()).first()
         if usuario_existente:
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="Este usuário já existe.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Este usuário já existe.")
 
         novo_usuario = Usuario(
             usuario=usuario,
@@ -302,8 +311,8 @@ def configurar_rotas(app):
             perfil = PerfilSetor(
                 usuario_id=novo_usuario.id,
                 setor_lavagem=(setor_cadastro == "lavagem"),
-                setor_acao=(setor_cadastro == "acao"),
-                cargo_acao=cargo_acao if setor_cadastro == "acao" else None,
+                setor_acao=(setor_cadastro in ("acao", "gerencia")),
+                cargo_acao=cargo_acao if setor_cadastro in ("acao", "gerencia") else None,
                 impulsos_acao=0,
                 impulsos_lavagem=0,
             )
@@ -312,11 +321,11 @@ def configurar_rotas(app):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="Este usuário já existe.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Este usuário já existe.")
         except SQLAlchemyError:
             db.session.rollback()
             logger.exception("Erro de banco ao cadastrar usuário.")
-            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="Não foi possível concluir o cadastro.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Não foi possível concluir o cadastro.")
 
         flash("Conta criada com sucesso. Entre com seu usuário e senha.", "sucesso")
         return redirect(url_for("login"))
@@ -864,12 +873,11 @@ CARGOS_ACAO = [
     "Soldado",
     "Capanga",
     "Tenente de Rua",
-    "Chefe de Setor",
-    "Alto Conselho",
-    "Sub Gerente",
 ]
 
-HIERARQUIA_ACAO = {cargo: indice for indice, cargo in enumerate(CARGOS_ACAO)}
+CARGOS_PERFIL = CARGOS_ACAO + CARGOS_GERENCIA
+
+HIERARQUIA_ACAO = {cargo: indice for indice, cargo in enumerate(CARGOS_PERFIL)}
 
 METAS_ACAO = {
     "Lanterninha": {
@@ -1040,7 +1048,7 @@ def configurar_rotas_gestao(app):
             perfil.setor_acao = request.form.get("setor_acao") == "on"
 
             cargo = limpar(request.form.get("cargo_acao"), 60)
-            perfil.cargo_acao = cargo if cargo in CARGOS_ACAO else None
+            perfil.cargo_acao = cargo if cargo in CARGOS_PERFIL else None
 
             try:
                 perfil.impulsos_acao = max(0, min(2, int(request.form.get("impulsos_acao", 0))))
@@ -1059,6 +1067,7 @@ def configurar_rotas_gestao(app):
             "perfil_setores.html",
             perfil=perfil,
             cargos_acao=CARGOS_ACAO,
+            cargos_gerencia=CARGOS_GERENCIA,
         )
 
     @app.route("/acoes")

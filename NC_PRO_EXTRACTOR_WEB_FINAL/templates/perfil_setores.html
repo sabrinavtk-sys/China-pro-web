@@ -1,7 +1,7 @@
 {% extends "base_gestao.html" %}
 {% block title %}Setores e Cargos — ChinaPRO{% endblock %}
 {% block content %}
-<header class="top"><div><span class="kicker">PERFIL</span><h1>Setores e cargos</h1><p class="muted">Uma conta pode participar de Lavagem, Ação ou dos dois setores.</p></div></header>
+<header class="top"><div><span class="kicker">PERFIL</span><h1>Setores e cargos</h1><p class="muted">Organize sua participação em Lavagem, Ação e Gerência.</p></div></header>
 <form method="post" class="card" style="max-width:760px">
   <h2>Participação</h2>
   <label><input style="width:auto" type="checkbox" name="setor_lavagem" {% if perfil.setor_lavagem %}checked{% endif %}> 💰 Setor de Lavagem</label>
@@ -9,12 +9,19 @@
 
   <div class="grid two">
     <div>
-      <label>Cargo de Ação</label>
+      <label>Cargo de Ação / Gerência</label>
       <select name="cargo_acao">
         <option value="">Selecione...</option>
+        <optgroup label="Ação">
         {% for cargo in cargos_acao %}
         <option value="{{ cargo }}" {% if perfil.cargo_acao == cargo %}selected{% endif %}>{{ cargo }}</option>
         {% endfor %}
+        </optgroup>
+        <optgroup label="Gerência">
+        {% for cargo in cargos_gerencia %}
+        <option value="{{ cargo }}" {% if perfil.cargo_acao == cargo %}selected{% endif %}>{{ cargo }}</option>
+        {% endfor %}
+        </optgroup>
       </select>
     </div>
     <div>
