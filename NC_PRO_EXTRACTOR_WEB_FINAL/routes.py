@@ -42,6 +42,19 @@ CARGOS = {
 }
 
 ORDEM_CARGOS = list(CARGOS.keys())
+
+CARGOS_ACAO_CADASTRO = [
+    "Lanterninha",
+    "Olheiro",
+    "Cobrador",
+    "Soldado",
+    "Capanga",
+    "Tenente de Rua",
+    "Chefe de Setor",
+    "Alto Conselho",
+    "Sub Gerente",
+]
+
 METAS_ORGANIZACAO = {
  "Funcionário":{"normal":(100,100,5000000),"1":(80,80,4000000),"2":(50,50,2500000)},
  "Vendedor":{"normal":(90,90,4500000),"1":(72,72,3600000),"2":(45,45,2225000)},
@@ -219,41 +232,77 @@ def configurar_rotas(app):
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
         if request.method == "GET":
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS)
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO)
 
         usuario = limpar_texto(request.form.get("usuario"), 50)
         senha = str(request.form.get("senha") or "")
         confirmar_senha = str(request.form.get("confirmar_senha") or "")
-        cargo = limpar_texto(request.form.get("cargo"), 30)
+        cargo_selecionado = limpar_texto(
+            request.form.get("cargo"),
+            80,
+        )
 
-        if not usuario or not senha or not confirmar_senha or cargo not in CARGOS:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Preencha todos os campos e selecione seu cargo atual.")
+        setor_cadastro = ""
+        cargo_lavagem = None
+        cargo_acao = None
+
+        if cargo_selecionado.startswith("lavagem:"):
+            cargo_lavagem = cargo_selecionado.split(":", 1)[1].strip()
+            if cargo_lavagem in CARGOS:
+                setor_cadastro = "lavagem"
+
+        elif cargo_selecionado.startswith("acao:"):
+            cargo_acao = cargo_selecionado.split(":", 1)[1].strip()
+            if cargo_acao in CARGOS_ACAO_CADASTRO:
+                setor_cadastro = "acao"
+
+        if not usuario or not senha or not confirmar_senha or not setor_cadastro:
+            return render_template(
+                "cadastro.html",
+                cargos_lavagem=ORDEM_CARGOS,
+                cargos_acao=CARGOS_ACAO_CADASTRO,
+                erro="Preencha todos os campos e selecione seu cargo atual.",
+            )
         if len(usuario) < 3:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="O nome de usuário deve possuir pelo menos 3 caracteres.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="O nome de usuário deve possuir pelo menos 3 caracteres.")
         if len(senha) < 6:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="A senha deve possuir pelo menos 6 caracteres.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="A senha deve possuir pelo menos 6 caracteres.")
         if senha != confirmar_senha:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="As senhas não coincidem.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="As senhas não coincidem.")
 
         usuario_existente = Usuario.query.filter(func.lower(Usuario.usuario) == usuario.lower()).first()
         if usuario_existente:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Este usuário já existe.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="Este usuário já existe.")
 
         novo_usuario = Usuario(
             usuario=usuario,
             senha=bcrypt.generate_password_hash(senha).decode("utf-8"),
-            cargo=cargo,
+            # Mantém compatibilidade com o sistema antigo de Lavagem.
+            # Para contas de Ação, o cargo real fica em PerfilSetor.
+            cargo=cargo_lavagem if setor_cadastro == "lavagem" else "Funcionário",
         )
         try:
             db.session.add(novo_usuario)
+            db.session.flush()
+
+            perfil = PerfilSetor(
+                usuario_id=novo_usuario.id,
+                setor_lavagem=(setor_cadastro == "lavagem"),
+                setor_acao=(setor_cadastro == "acao"),
+                cargo_acao=cargo_acao if setor_cadastro == "acao" else None,
+                impulsos_acao=0,
+                impulsos_lavagem=0,
+            )
+            db.session.add(perfil)
+
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Este usuário já existe.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="Este usuário já existe.")
         except SQLAlchemyError:
             db.session.rollback()
             logger.exception("Erro de banco ao cadastrar usuário.")
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Não foi possível concluir o cadastro.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, erro="Não foi possível concluir o cadastro.")
 
         flash("Conta criada com sucesso. Entre com seu usuário e senha.", "sucesso")
         return redirect(url_for("login"))

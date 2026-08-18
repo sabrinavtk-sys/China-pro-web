@@ -24,10 +24,45 @@
 <input type="text" name="usuario" placeholder="Digite seu usuário" required minlength="3">
 <input type="password" name="senha" placeholder="Digite sua senha" required minlength="6">
 <input type="password" name="confirmar_senha" placeholder="Confirme sua senha" required minlength="6">
-<select name="cargo" class="campo-select" required>
-<option value="" selected disabled>Selecione seu cargo atual</option>
-{% for cargo in cargos %}<option value="{{ cargo }}">{{ cargo }}</option>{% endfor %}
-</select>
+<select
+                    name="cargo"
+                    id="cargo"
+                    required
+                >
+                    <option value="">
+                        Selecione seu cargo atual
+                    </option>
+
+                    <optgroup label="💰 CARGOS DE LAVAGEM">
+                        {% for cargo in cargos_lavagem %}
+                        <option value="lavagem:{{ cargo }}">
+                            {{ cargo }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+
+                    <optgroup label="🔫 CARGOS DE AÇÃO">
+                        {% for cargo in cargos_acao %}
+                        <option value="acao:{{ cargo }}">
+                            {{ cargo }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+
+                </select>
+                <small
+                    style="
+                        display:block;
+                        margin-top:8px;
+                        color:#d9b8e8;
+                        font-size:11px;
+                        line-height:1.4;
+                    "
+                >
+                    Escolha o cargo correspondente ao seu setor atual:
+                    Lavagem ou Ação.
+                </small>
+
 <small class="ajuda-cargo">O cargo define sua meta semanal e pode ser atualizado depois em Configurações.</small>
 <button type="submit">Cadastrar</button>
 </form>
