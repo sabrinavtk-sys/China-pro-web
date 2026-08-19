@@ -27,7 +27,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import bcrypt, db
-from models import Acao, Desmanche, ExtratoPonto, MetaSemanalUsuario, Operacao, PerfilSetor, Usuario
+from models import Acao, Desmanche, ExtratoPonto, MetaSemanalUsuario, Operacao, PerfilGame, PerfilSetor, SolicitacaoPerfilGame, Usuario
 
 
 logger = logging.getLogger(__name__)
@@ -224,6 +224,34 @@ def resumo_meta_semanal(usuario):
         "fim_exibicao": fim_local - timedelta(minutes=1),
     }
 
+
+
+
+def obter_perfil_game(usuario_id):
+    return PerfilGame.query.filter_by(usuario_id=usuario_id).first()
+
+
+def obter_solicitacao_perfil_pendente(usuario_id):
+    return SolicitacaoPerfilGame.query.filter_by(
+        usuario_id=usuario_id,
+        status="pendente",
+    ).order_by(SolicitacaoPerfilGame.solicitado_em.desc()).first()
+
+
+def validar_dados_game(nome_game, id_game):
+    nome = limpar_texto(nome_game, 100)
+    identificador = limpar_texto(id_game, 30)
+
+    if len(nome) < 2:
+        raise ValueError("Informe seu nome no game.")
+    if not re.fullmatch(r"[0-9]{1,12}", identificador):
+        raise ValueError("O ID do game deve conter somente números.")
+    return nome, identificador
+
+
+def nome_membro_exibicao(usuario):
+    perfil_game = obter_perfil_game(usuario.id)
+    return perfil_game.nome_game if perfil_game else usuario.usuario
 
 
 def admin_required(funcao):
@@ -594,6 +622,8 @@ def configurar_rotas(app):
                 usuario_id=usuario.id
             ).first()
 
+            perfil_game = obter_perfil_game(usuario.id)
+
             total_lavagens = Operacao.query.filter_by(
                 usuario_id=usuario.id
             ).count()
@@ -629,6 +659,7 @@ def configurar_rotas(app):
             membros.append({
                 "usuario": usuario,
                 "perfil": perfil,
+                "perfil_game": perfil_game,
                 "lavagens": total_lavagens,
                 "acoes": total_acoes,
                 "desmanches": total_desmanches,
@@ -641,6 +672,19 @@ def configurar_rotas(app):
         total_desmanches_geral = Desmanche.query.count()
         total_lavagens_geral = Operacao.query.count()
 
+        solicitacoes_pendentes = SolicitacaoPerfilGame.query.filter_by(
+            status="pendente"
+        ).order_by(
+            SolicitacaoPerfilGame.solicitado_em.asc()
+        ).all()
+        solicitacoes = [
+            {
+                "solicitacao": sol,
+                "usuario": db.session.get(Usuario, sol.usuario_id),
+            }
+            for sol in solicitacoes_pendentes
+        ]
+
         return render_template(
             "admin_dashboard.html",
             membros=membros,
@@ -648,6 +692,8 @@ def configurar_rotas(app):
             total_acoes_geral=total_acoes_geral,
             total_desmanches_geral=total_desmanches_geral,
             total_lavagens_geral=total_lavagens_geral,
+            solicitacoes=solicitacoes,
+            total_solicitacoes=len(solicitacoes),
         )
 
 
@@ -667,6 +713,7 @@ def configurar_rotas(app):
         perfil = PerfilSetor.query.filter_by(
             usuario_id=usuario.id
         ).first()
+        perfil_game = obter_perfil_game(usuario.id)
 
         lavagens = Operacao.query.filter_by(
             usuario_id=usuario.id
@@ -708,6 +755,7 @@ def configurar_rotas(app):
             "admin_membro.html",
             membro=usuario,
             perfil=perfil,
+            perfil_game=perfil_game,
             lavagens=lavagens,
             acoes=acoes,
             desmanches=desmanches,
@@ -766,12 +814,95 @@ def configurar_rotas(app):
             return redirect(url_for("dashboard" if houve_promocao else "configuracoes"))
 
         progresso = resumo_meta_semanal(current_user)
+        perfil_game = obter_perfil_game(current_user.id)
+        solicitacao_perfil = obter_solicitacao_perfil_pendente(current_user.id)
+        historico_solicitacoes = SolicitacaoPerfilGame.query.filter_by(
+            usuario_id=current_user.id
+        ).order_by(
+            SolicitacaoPerfilGame.solicitado_em.desc()
+        ).limit(5).all()
+
         return render_template(
             "configuracoes.html",
             cargos=ORDEM_CARGOS,
             metas=CARGOS,
             progresso=progresso,
+            perfil_game=perfil_game,
+            solicitacao_perfil=solicitacao_perfil,
+            historico_solicitacoes=historico_solicitacoes,
         )
+
+    @app.route("/configuracoes/perfil-game", methods=["POST"])
+    @login_required
+    def salvar_perfil_game():
+        try:
+            nome_novo, id_novo = validar_dados_game(
+                request.form.get("nome_game"),
+                request.form.get("id_game"),
+            )
+        except ValueError as erro:
+            flash(str(erro), "erro")
+            return redirect(url_for("configuracoes"))
+
+        perfil_atual = obter_perfil_game(current_user.id)
+
+        # Primeira vinculação: é salva imediatamente.
+        if perfil_atual is None:
+            id_em_uso = PerfilGame.query.filter_by(id_game=id_novo).first()
+            if id_em_uso:
+                flash("Este ID do game já está vinculado a outra conta.", "erro")
+                return redirect(url_for("configuracoes"))
+
+            try:
+                db.session.add(PerfilGame(
+                    usuario_id=current_user.id,
+                    nome_game=nome_novo,
+                    id_game=id_novo,
+                ))
+                db.session.commit()
+                flash("Nome e ID do game vinculados à sua conta.", "sucesso")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Este ID do game já está vinculado a outra conta.", "erro")
+            except SQLAlchemyError:
+                db.session.rollback()
+                logger.exception("Erro ao criar perfil game do usuário %s", current_user.id)
+                flash("Não foi possível salvar seu perfil do game.", "erro")
+            return redirect(url_for("configuracoes"))
+
+        if perfil_atual.nome_game == nome_novo and perfil_atual.id_game == id_novo:
+            flash("Nenhuma alteração foi detectada.", "info")
+            return redirect(url_for("configuracoes"))
+
+        if obter_solicitacao_perfil_pendente(current_user.id):
+            flash("Você já possui uma alteração de Nome/ID aguardando aprovação do ADM.", "aviso")
+            return redirect(url_for("configuracoes"))
+
+        id_em_uso = PerfilGame.query.filter(
+            PerfilGame.id_game == id_novo,
+            PerfilGame.usuario_id != current_user.id,
+        ).first()
+        if id_em_uso:
+            flash("Este ID do game já está vinculado a outra conta.", "erro")
+            return redirect(url_for("configuracoes"))
+
+        try:
+            db.session.add(SolicitacaoPerfilGame(
+                usuario_id=current_user.id,
+                nome_atual=perfil_atual.nome_game,
+                id_atual=perfil_atual.id_game,
+                nome_novo=nome_novo,
+                id_novo=id_novo,
+                status="pendente",
+            ))
+            db.session.commit()
+            flash("Alteração enviada. Seu Nome/ID atual só muda após aprovação de um ADM.", "sucesso")
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Erro ao solicitar alteração de perfil game do usuário %s", current_user.id)
+            flash("Não foi possível enviar a solicitação.", "erro")
+
+        return redirect(url_for("configuracoes"))
 
     @app.route("/historico")
     @login_required
@@ -782,24 +913,46 @@ def configurar_rotas(app):
     @app.route("/relatorios")
     @login_required
     def relatorios():
-        filtro_usuario = Operacao.usuario_id == current_user.id
         resumo = db.session.query(
             func.count(Operacao.id),
             func.coalesce(func.sum(Operacao.valor), 0),
             func.coalesce(func.sum(Operacao.valor_porcentagem), 0),
-        ).filter(filtro_usuario).one()
-        jogadores = db.session.query(
-            Operacao.nome_jogador,
+        ).one()
+
+        membros = db.session.query(
+            Usuario.id.label("usuario_id"),
+            Usuario.usuario.label("usuario_site"),
+            Usuario.cargo.label("cargo"),
+            PerfilGame.nome_game.label("nome_game"),
+            PerfilGame.id_game.label("id_game"),
             func.count(Operacao.id).label("total_operacoes"),
             func.coalesce(func.sum(Operacao.valor), 0).label("valor_total"),
             func.coalesce(func.sum(Operacao.valor_porcentagem), 0).label("ganhos_total"),
-        ).filter(filtro_usuario).group_by(Operacao.nome_jogador).order_by(func.sum(Operacao.valor).desc()).all()
+        ).join(
+            Operacao,
+            Operacao.usuario_id == Usuario.id,
+        ).outerjoin(
+            PerfilGame,
+            PerfilGame.usuario_id == Usuario.id,
+        ).filter(
+            Usuario.is_admin.is_(False),
+        ).group_by(
+            Usuario.id,
+            Usuario.usuario,
+            Usuario.cargo,
+            PerfilGame.nome_game,
+            PerfilGame.id_game,
+        ).order_by(
+            func.count(Operacao.id).desc(),
+            func.sum(Operacao.valor).desc(),
+        ).all()
+
         return render_template(
             "relatorios.html",
             total_operacoes=resumo[0],
             valor_total=resumo[1],
             ganhos_total=resumo[2],
-            jogadores=jogadores,
+            membros=membros,
         )
 
     @app.route("/excluir-operacao/<int:id>", methods=["POST"])
@@ -1008,6 +1161,8 @@ def configurar_rotas_gestao(app):
     @login_required
     def gestao():
         perfil = obter_perfil(current_user.id)
+        perfil_game = obter_perfil_game(current_user.id)
+        solicitacao_perfil = obter_solicitacao_perfil_pendente(current_user.id)
         inicio = inicio_semana()
 
         pontos_acao = db.session.query(
@@ -1026,16 +1181,100 @@ def configurar_rotas_gestao(app):
             ExtratoPonto.criado_em >= inicio,
         ).scalar()
 
+        lavagens_semana, valor_semana = db.session.query(
+            func.count(Operacao.id),
+            func.coalesce(func.sum(Operacao.valor), 0),
+        ).filter(
+            Operacao.usuario_id == current_user.id,
+            Operacao.criado_em >= inicio,
+        ).one()
+
+        acoes_semana = Acao.query.filter(
+            Acao.usuario_id == current_user.id,
+            Acao.data_hora >= inicio,
+        ).count()
+
+        desmanches_semana = Desmanche.query.filter(
+            Desmanche.usuario_id == current_user.id,
+            Desmanche.data_hora >= inicio,
+        ).count()
+
         meta_acao = None
         if perfil.cargo_acao in METAS_ACAO:
-            meta_acao = METAS_ACAO[perfil.cargo_acao][perfil.impulsos_acao if perfil.impulsos_acao in (0,1,2) else 0]
+            meta_acao = METAS_ACAO[perfil.cargo_acao][
+                perfil.impulsos_acao if perfil.impulsos_acao in (0, 1, 2) else 0
+            ]
+
+        meta_lavagem = resumo_meta_semanal(current_user)
+
+        # Posição semanal em cada ranking.
+        lavagem_rank = db.session.query(
+            Operacao.usuario_id,
+            func.count(Operacao.id).label("total"),
+        ).filter(
+            Operacao.criado_em >= inicio,
+        ).group_by(Operacao.usuario_id).order_by(func.count(Operacao.id).desc()).all()
+
+        acao_rank = db.session.query(
+            ExtratoPonto.usuario_id,
+            func.sum(ExtratoPonto.pontos).label("total"),
+        ).filter(
+            ExtratoPonto.categoria == "acao",
+            ExtratoPonto.criado_em >= inicio,
+        ).group_by(ExtratoPonto.usuario_id).order_by(func.sum(ExtratoPonto.pontos).desc()).all()
+
+        desmanche_rank = db.session.query(
+            Desmanche.usuario_id,
+            func.count(Desmanche.id).label("total"),
+        ).filter(
+            Desmanche.data_hora >= inicio,
+        ).group_by(Desmanche.usuario_id).order_by(func.count(Desmanche.id).desc()).all()
+
+        def posicao(lista):
+            for indice, linha in enumerate(lista, 1):
+                if linha[0] == current_user.id:
+                    return indice
+            return None
+
+        posicoes = {
+            "lavagem": posicao(lavagem_rank),
+            "acao": posicao(acao_rank),
+            "desmanche": posicao(desmanche_rank),
+        }
+
+        atividades = []
+        for op in Operacao.query.filter_by(usuario_id=current_user.id).order_by(Operacao.criado_em.desc()).limit(4).all():
+            atividades.append({"data": op.criado_em, "icone": "💰", "tipo": "Lavagem", "titulo": f"{op.nome_jogador} #{op.id_jogador}"})
+        for acao in Acao.query.filter_by(usuario_id=current_user.id).order_by(Acao.data_hora.desc()).limit(4).all():
+            atividades.append({"data": acao.data_hora, "icone": "🔫", "tipo": "Ação", "titulo": f"{acao.tipo} — {acao.resultado}"})
+        for des in Desmanche.query.filter_by(usuario_id=current_user.id).order_by(Desmanche.data_hora.desc()).limit(4).all():
+            atividades.append({"data": des.data_hora, "icone": "🚗", "tipo": "Desmanche", "titulo": des.modelo})
+
+        def timestamp_seguro(item):
+            data = item["data"]
+            if data is None:
+                return 0
+            if data.tzinfo is None:
+                data = data.replace(tzinfo=timezone.utc)
+            return data.timestamp()
+
+        atividades = sorted(atividades, key=timestamp_seguro, reverse=True)[:8]
 
         return render_template(
             "gestao.html",
             perfil=perfil,
+            perfil_game=perfil_game,
+            solicitacao_perfil=solicitacao_perfil,
             pontos_acao=int(pontos_acao or 0),
             pontos_lavagem=int(pontos_lavagem or 0),
+            lavagens_semana=int(lavagens_semana or 0),
+            valor_semana=valor_semana or 0,
+            acoes_semana=acoes_semana,
+            desmanches_semana=desmanches_semana,
             meta_acao=meta_acao,
+            meta_lavagem=meta_lavagem,
+            posicoes=posicoes,
+            atividades=atividades,
         )
 
     @app.route("/perfil-setores", methods=["GET", "POST"])
@@ -1263,112 +1502,110 @@ def configurar_rotas_gestao(app):
             periodo = "semana"
 
         inicio_periodo = None
-
         if periodo == "semana":
             inicio_periodo = inicio_semana()
-
         elif periodo == "mes":
             agora = datetime.now(FUSO_GESTAO)
-            inicio_periodo = agora.replace(
-                day=1,
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0,
-            ).astimezone(timezone.utc)
+            inicio_periodo = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
-        def ranking_lavagem():
+        def base_usuario_total(modelo, coluna_data, expressao_total, filtros=()):
             consulta = db.session.query(
-                Usuario.usuario,
-                func.count(Operacao.id).label("total"),
+                Usuario.id.label("usuario_id"),
+                Usuario.usuario.label("usuario_site"),
+                Usuario.cargo.label("cargo"),
+                PerfilGame.nome_game.label("nome_game"),
+                PerfilGame.id_game.label("id_game"),
+                expressao_total.label("total"),
             ).join(
-                Operacao,
-                Operacao.usuario_id == Usuario.id,
-            )
-
-            if inicio_periodo is not None:
-                consulta = consulta.filter(
-                    Operacao.criado_em >= inicio_periodo
-                )
-
-            return consulta.group_by(
-                Usuario.id,
-                Usuario.usuario,
-            ).order_by(
-                func.count(Operacao.id).desc(),
-                Usuario.usuario.asc(),
-            ).limit(100).all()
-
-        def ranking_acao():
-            consulta = db.session.query(
-                Usuario.usuario,
-                func.coalesce(
-                    func.sum(ExtratoPonto.pontos),
-                    0,
-                ).label("total"),
-            ).join(
-                ExtratoPonto,
-                ExtratoPonto.usuario_id == Usuario.id,
+                modelo,
+                modelo.usuario_id == Usuario.id,
+            ).outerjoin(
+                PerfilGame,
+                PerfilGame.usuario_id == Usuario.id,
             ).filter(
-                ExtratoPonto.categoria == "acao",
+                Usuario.is_admin.is_(False),
+                *filtros,
             )
-
             if inicio_periodo is not None:
-                consulta = consulta.filter(
-                    ExtratoPonto.criado_em >= inicio_periodo
-                )
-
+                consulta = consulta.filter(coluna_data >= inicio_periodo)
             return consulta.group_by(
-                Usuario.id,
-                Usuario.usuario,
-            ).order_by(
-                func.sum(ExtratoPonto.pontos).desc(),
-                Usuario.usuario.asc(),
-            ).limit(100).all()
-
-        def ranking_desmanche():
-            consulta = db.session.query(
-                Usuario.usuario,
-                func.count(Desmanche.id).label("total"),
-            ).join(
-                Desmanche,
-                Desmanche.usuario_id == Usuario.id,
-            )
-
-            if inicio_periodo is not None:
-                consulta = consulta.filter(
-                    Desmanche.data_hora >= inicio_periodo
-                )
-
-            return consulta.group_by(
-                Usuario.id,
-                Usuario.usuario,
-            ).order_by(
-                func.count(Desmanche.id).desc(),
-                Usuario.usuario.asc(),
-            ).limit(100).all()
+                Usuario.id, Usuario.usuario, Usuario.cargo,
+                PerfilGame.nome_game, PerfilGame.id_game,
+            ).order_by(expressao_total.desc(), Usuario.usuario.asc()).limit(100).all()
 
         rankings = {
-            "lavagem": ranking_lavagem(),
-            "acao": ranking_acao(),
-            "desmanche": ranking_desmanche(),
+            "lavagem": base_usuario_total(Operacao, Operacao.criado_em, func.count(Operacao.id)),
+            "acao": base_usuario_total(
+                ExtratoPonto,
+                ExtratoPonto.criado_em,
+                func.sum(ExtratoPonto.pontos),
+                (ExtratoPonto.categoria == "acao",),
+            ),
+            "desmanche": base_usuario_total(Desmanche, Desmanche.data_hora, func.count(Desmanche.id)),
         }
 
         ranking_rows = rankings[categoria]
-
-        top_lavagem = rankings["lavagem"][0] if rankings["lavagem"] else None
-        top_acao = rankings["acao"][0] if rankings["acao"] else None
-        top_desmanche = rankings["desmanche"][0] if rankings["desmanche"] else None
-
         return render_template(
             "ranking.html",
             ranking=ranking_rows,
             categoria=categoria,
             periodo=periodo,
-            top_lavagem=top_lavagem,
-            top_acao=top_acao,
-            top_desmanche=top_desmanche,
+            top_lavagem=rankings["lavagem"][0] if rankings["lavagem"] else None,
+            top_acao=rankings["acao"][0] if rankings["acao"] else None,
+            top_desmanche=rankings["desmanche"][0] if rankings["desmanche"] else None,
         )
+
+    @app.route("/admin/solicitacao-perfil/<int:solicitacao_id>/<acao>", methods=["POST"])
+    @login_required
+    @admin_required
+    def decidir_solicitacao_perfil(solicitacao_id, acao):
+        solicitacao = db.session.get(SolicitacaoPerfilGame, solicitacao_id)
+        if solicitacao is None:
+            flash("Solicitação não encontrada.", "erro")
+            return redirect(url_for("admin_dashboard"))
+        if solicitacao.status != "pendente":
+            flash("Esta solicitação já foi analisada.", "info")
+            return redirect(url_for("admin_dashboard"))
+
+        if acao not in {"aprovar", "recusar"}:
+            flash("Ação administrativa inválida.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        try:
+            if acao == "aprovar":
+                conflito = PerfilGame.query.filter(
+                    PerfilGame.id_game == solicitacao.id_novo,
+                    PerfilGame.usuario_id != solicitacao.usuario_id,
+                ).first()
+                if conflito:
+                    flash("Não foi possível aprovar: o novo ID já pertence a outro membro.", "erro")
+                    return redirect(url_for("admin_dashboard"))
+
+                perfil_game = obter_perfil_game(solicitacao.usuario_id)
+                if perfil_game is None:
+                    perfil_game = PerfilGame(usuario_id=solicitacao.usuario_id)
+                    db.session.add(perfil_game)
+                perfil_game.nome_game = solicitacao.nome_novo
+                perfil_game.id_game = solicitacao.id_novo
+                solicitacao.status = "aprovada"
+                solicitacao.motivo_recusa = None
+            else:
+                solicitacao.status = "recusada"
+                solicitacao.motivo_recusa = limpar_texto(request.form.get("motivo"), 500) or "Alteração recusada pela administração."
+
+            solicitacao.admin_id = current_user.id
+            solicitacao.decidido_em = datetime.now(timezone.utc)
+            db.session.commit()
+            flash("Solicitação aprovada." if acao == "aprovar" else "Solicitação recusada.", "sucesso")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Não foi possível aprovar: o ID do game já está em uso.", "erro")
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Erro ao decidir solicitação de perfil %s", solicitacao_id)
+            flash("Não foi possível concluir a decisão.", "erro")
+
+        return redirect(url_for("admin_dashboard"))
 
     @app.route("/historico-geral")
     @login_required

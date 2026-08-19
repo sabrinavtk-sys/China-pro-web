@@ -2,30 +2,8 @@
 {% block title %}Administração — China PRO{% endblock %}
 {% block page_heading %}Administração{% endblock %}
 {% block content %}
-<section class="page-intro"><div><span class="kicker">PAINEL ADMINISTRATIVO</span><h2>🛡 Membros</h2><p class="muted">Cargos, setores, registros e pontuação em uma só tela.</p></div></section>
-<section class="stats-grid stats-grid-4">
-  <article class="card stat"><span>Membros</span><strong>{{ total_membros }}</strong></article>
-  <article class="card stat"><span>Lavagens</span><strong>{{ total_lavagens_geral }}</strong></article>
-  <article class="card stat"><span>Ações</span><strong>{{ total_acoes_geral }}</strong></article>
-  <article class="card stat"><span>Desmanches</span><strong>{{ total_desmanches_geral }}</strong></article>
-</section>
-<section class="card section-block">
-  <div class="section-title"><div><h2>Lista de membros</h2><small class="muted">Role para os lados apenas em telas pequenas</small></div></div>
-  <div class="table-wrap"><table class="table admin-table">
-    <thead><tr><th>Membro</th><th>Setor</th><th>Cargo</th><th>Impulsos</th><th>Lavagens</th><th>Ações</th><th>Desmanches</th><th>P. Ação</th><th>P. Lavagem</th><th></th></tr></thead>
-    <tbody>
-    {% for item in membros %}
-      <tr>
-        <td><b>{{ item.usuario.usuario }}</b></td>
-        <td>{% if item.perfil %}{% if item.perfil.setor_acao %}🔫 Ação {% endif %}{% if item.perfil.setor_lavagem %}💰 Lavagem{% endif %}{% else %}💰 Lavagem{% endif %}</td>
-        <td>{% if item.perfil and item.perfil.setor_acao and item.perfil.cargo_acao %}{{ item.perfil.cargo_acao }}{% else %}{{ item.usuario.cargo }}{% endif %}</td>
-        <td>{% if item.perfil %}A {{ item.perfil.impulsos_acao }} · L {{ item.perfil.impulsos_lavagem }}{% else %}0{% endif %}</td>
-        <td>{{ item.lavagens }}</td><td>{{ item.acoes }}</td><td>{{ item.desmanches }}</td>
-        <td class="gold"><b>{{ item.pontos_acao }}</b></td><td class="gold"><b>{{ item.pontos_lavagem }}</b></td>
-        <td><a class="btn secondary btn-small" href="{{ url_for('admin_membro', usuario_id=item.usuario.id) }}">Ver</a></td>
-      </tr>
-    {% else %}<tr><td colspan="10"><div class="empty-state">Nenhum membro cadastrado.</div></td></tr>{% endfor %}
-    </tbody>
-  </table></div>
-</section>
+<section class="page-intro"><div><span class="kicker">PAINEL ADMINISTRATIVO</span><h2>🛡 Membros</h2><p class="muted">Acompanhe membros e aprove alterações de Nome/ID do Game.</p></div></section>
+<section class="stats-grid stats-grid-4"><article class="card stat"><span>Membros</span><strong>{{ total_membros }}</strong></article><article class="card stat"><span>Lavagens</span><strong>{{ total_lavagens_geral }}</strong></article><article class="card stat"><span>Ações</span><strong>{{ total_acoes_geral }}</strong></article><article class="card stat"><span>Solicitações</span><strong>{{ total_solicitacoes }}</strong><small class="muted">Nome / ID pendentes</small></article></section>
+{% if solicitacoes %}<section class="card section-block admin-requests"><div class="section-title"><div><h2>🔔 Solicitações de alteração</h2><small class="muted">Nome e ID só mudam após sua decisão</small></div></div><div class="request-grid">{% for item in solicitacoes %}<article class="request-card"><div class="request-head"><div><b>{{ item.usuario.usuario if item.usuario else 'Usuário' }}</b><small>Solicitado em {{ item.solicitacao.solicitado_em.strftime('%d/%m/%Y %H:%M') }}</small></div><span class="status-badge status-pendente">Pendente</span></div><div class="change-grid"><div><span>Atual</span><b>{{ item.solicitacao.nome_atual }} · #{{ item.solicitacao.id_atual }}</b></div><div><span>Novo</span><b>{{ item.solicitacao.nome_novo }} · #{{ item.solicitacao.id_novo }}</b></div></div><div class="admin-request-actions"><form method="post" action="{{ url_for('decidir_solicitacao_perfil', solicitacao_id=item.solicitacao.id, acao='aprovar') }}"><button class="approve-btn">✓ Aprovar</button></form><form method="post" action="{{ url_for('decidir_solicitacao_perfil', solicitacao_id=item.solicitacao.id, acao='recusar') }}"><input name="motivo" placeholder="Motivo da recusa (opcional)"><button class="btn secondary">✕ Recusar</button></form></div></article>{% endfor %}</div></section>{% endif %}
+<section class="card section-block"><div class="section-title"><div><h2>Lista de membros</h2><small class="muted">Identidade do game + atividade</small></div></div><div class="table-wrap"><table class="table admin-table"><thead><tr><th>ID Game</th><th>Nome no Game</th><th>Usuário</th><th>Setor</th><th>Cargo</th><th>Lavagens</th><th>Ações</th><th>Desmanches</th><th></th></tr></thead><tbody>{% for item in membros %}<tr><td><b>#{{ item.perfil_game.id_game if item.perfil_game else '—' }}</b></td><td><b>{{ item.perfil_game.nome_game if item.perfil_game else 'Não configurado' }}</b></td><td>{{ item.usuario.usuario }}</td><td>{% if item.perfil %}{% if item.perfil.setor_acao %}🔫 Ação {% endif %}{% if item.perfil.setor_lavagem %}💰 Lavagem{% endif %}{% else %}💰 Lavagem{% endif %}</td><td>{% if item.perfil and item.perfil.setor_acao and item.perfil.cargo_acao %}{{ item.perfil.cargo_acao }}{% else %}{{ item.usuario.cargo }}{% endif %}</td><td>{{ item.lavagens }}</td><td>{{ item.acoes }}</td><td>{{ item.desmanches }}</td><td><a class="btn secondary btn-small" href="{{ url_for('admin_membro', usuario_id=item.usuario.id) }}">Ver</a></td></tr>{% else %}<tr><td colspan="9"><div class="empty-state">Nenhum membro cadastrado.</div></td></tr>{% endfor %}</tbody></table></div></section>
 {% endblock %}

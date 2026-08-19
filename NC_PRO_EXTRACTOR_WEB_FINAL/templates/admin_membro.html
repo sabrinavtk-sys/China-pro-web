@@ -7,6 +7,12 @@
   <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">← Voltar aos membros</a>
 </section>
 
+<section class="card game-admin-profile">
+  <div><span>Nome no Game</span><b>{{ perfil_game.nome_game if perfil_game else 'Não configurado' }}</b></div>
+  <div><span>ID Game</span><b>#{{ perfil_game.id_game if perfil_game else '—' }}</b></div>
+  <div><span>Usuário do Site</span><b>{{ membro.usuario }}</b></div>
+</section>
+
 <section class="stats-grid stats-grid-3">
   <article class="card stat"><span>Pontos Ação</span><strong>{{ pontos_acao }}</strong></article>
   <article class="card stat"><span>Pontos Lavagem</span><strong>{{ pontos_lavagem }}</strong></article>

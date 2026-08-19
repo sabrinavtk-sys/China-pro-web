@@ -167,3 +167,44 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
   .china-app .actions>.btn,.china-app .actions>button{flex:1 1 100%!important}
   .china-app .choice-grid{grid-template-columns:1fr!important}
 }
+
+
+/* Perfil do game, Gestão e aprovação administrativa */
+.china-app .game-current,.china-app .game-admin-profile{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.china-app .game-current>div,.china-app .game-admin-profile>div{padding:13px;border:1px solid #2b2127;border-radius:10px;background:#0d0c10;min-width:0}
+.china-app .game-current span,.china-app .game-admin-profile span,.china-app .change-grid span{display:block;color:#91878e;font-size:10px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.china-app .game-current b,.china-app .game-admin-profile b{overflow-wrap:anywhere}
+.china-app .request-status{display:grid;gap:5px;margin-top:14px;padding:13px;border-radius:10px;border:1px solid #694e27;background:rgba(190,133,38,.08)}
+.china-app .request-status.pending{color:#f2c975}
+.china-app .status-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:999px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+.china-app .status-pendente{background:rgba(243,181,61,.11);color:#f5c76c;border:1px solid rgba(243,181,61,.25)}
+.china-app .status-aprovada{background:rgba(56,216,161,.10);color:#70e3bb;border:1px solid rgba(56,216,161,.25)}
+.china-app .status-recusada{background:rgba(255,92,116,.10);color:#ff8698;border:1px solid rgba(255,92,116,.25)}
+.china-app .profile-alert{display:flex!important;align-items:center;gap:12px!important;margin-bottom:14px!important}
+.china-app .profile-alert span{flex:1;color:#b7adb4}
+.china-app .profile-hero{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.china-app .profile-identity{display:flex;align-items:center;gap:14px;min-width:0}
+.china-app .profile-avatar{width:58px;height:58px;flex:0 0 58px;border-radius:16px;display:grid;place-items:center;font-size:23px;font-weight:900;background:linear-gradient(145deg,#711936,#251019);border:1px solid #7b2947;color:#fff}
+.china-app .profile-identity h2{margin:3px 0 4px!important;font-size:22px!important}
+.china-app .profile-identity p{margin:0;color:#a89ea5}
+.china-app .profile-tags{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.china-app .rank-position{text-decoration:none!important;color:#fff!important;text-align:center!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-height:125px!important}
+.china-app .rank-position span{font-size:11px;color:#a79da4;text-transform:uppercase;font-weight:800}
+.china-app .rank-position strong{font-size:30px;margin:7px 0;color:#ff4d87}
+.china-app .rank-position small{color:#81777e}
+.china-app .quick-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.china-app .quick-grid.compact .quick-card{min-height:82px!important}
+.china-app .game-id{color:#9f959c;font-size:11px;font-weight:700}
+.china-app .request-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.china-app .request-card{padding:15px;border:1px solid #35242c;border-radius:11px;background:#0d0c10;min-width:0}
+.china-app .request-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.china-app .request-head small{display:block;color:#887e85;margin-top:4px}
+.china-app .change-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.china-app .change-grid>div{padding:11px;border:1px solid #292026;border-radius:9px;background:#09090c;overflow-wrap:anywhere}
+.china-app .admin-request-actions{display:grid;grid-template-columns:auto 1fr;gap:8px;margin-top:12px}
+.china-app .admin-request-actions form:last-child{display:grid;grid-template-columns:minmax(160px,1fr) auto;gap:7px}
+.china-app .admin-request-actions input{min-height:40px!important}
+.china-app .approve-btn{background:linear-gradient(90deg,#16845d,#2ac68f)!important;border-color:#38d6a1!important}
+.china-app .game-admin-profile{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 14px}
+@media(max-width:900px){.china-app .request-grid{grid-template-columns:1fr}.china-app .admin-request-actions{grid-template-columns:1fr}.china-app .admin-request-actions form:last-child{grid-template-columns:1fr}.china-app .game-admin-profile{grid-template-columns:1fr}}
+@media(max-width:700px){.china-app .profile-hero{align-items:flex-start;flex-direction:column}.china-app .profile-tags{justify-content:flex-start}.china-app .profile-alert{align-items:flex-start!important;flex-direction:column}.china-app .game-current{grid-template-columns:1fr}.china-app .quick-grid.compact{grid-template-columns:1fr!important}.china-app .change-grid{grid-template-columns:1fr}}

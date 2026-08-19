@@ -697,3 +697,65 @@ class ExtratoPonto(db.Model):
     pontos = db.Column(db.Integer, nullable=False)
     descricao = db.Column(db.String(255), nullable=False)
     criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+
+# =========================================================
+# PERFIL DO GAME + APROVAÇÃO ADMINISTRATIVA
+# =========================================================
+
+class PerfilGame(db.Model):
+    __tablename__ = "perfis_game"
+
+    __table_args__ = (
+        UniqueConstraint("id_game", name="uq_perfil_game_id_game"),
+        Index("ix_perfil_game_usuario", "usuario_id"),
+        Index("ix_perfil_game_nome", "nome_game"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    nome_game = db.Column(db.String(100), nullable=False)
+    id_game = db.Column(db.String(30), nullable=False, unique=True)
+    criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+    atualizado_em = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=agora_utc,
+        onupdate=agora_utc,
+    )
+
+
+class SolicitacaoPerfilGame(db.Model):
+    __tablename__ = "solicitacoes_perfil_game"
+
+    __table_args__ = (
+        Index("ix_solicitacao_perfil_status_data", "status", "solicitado_em"),
+        Index("ix_solicitacao_perfil_usuario", "usuario_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    nome_atual = db.Column(db.String(100), nullable=True)
+    id_atual = db.Column(db.String(30), nullable=True)
+    nome_novo = db.Column(db.String(100), nullable=False)
+    id_novo = db.Column(db.String(30), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="pendente", index=True)
+    admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    motivo_recusa = db.Column(db.String(500), nullable=True)
+    solicitado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+    decidido_em = db.Column(db.DateTime(timezone=True), nullable=True)
+

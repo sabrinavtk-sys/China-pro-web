@@ -2,44 +2,40 @@
 {% block title %}Configurações — China PRO{% endblock %}
 {% block page_heading %}Configurações{% endblock %}
 {% block content %}
-<section class="page-intro"><div><span class="kicker">PREFERÊNCIAS</span><h2>⚙ Configurações</h2><p class="muted">Cargo, impulsos, meta e progresso semanal.</p></div></section>
+<section class="page-intro"><div><span class="kicker">PREFERÊNCIAS</span><h2>⚙ Configurações</h2><p class="muted">Identidade no game, cargo, impulsos e progresso semanal.</p></div></section>
+
 <section class="content-grid content-grid-2">
-  <form method="POST" class="card form-card">
-    <h2>Cargo e meta</h2>
-    <label>Cargo atual</label>
-    <select name="cargo">{% for cargo in cargos %}<option value="{{ cargo }}" {% if cargo==current_user.cargo %}selected{% endif %}>{{ cargo }}{% if metas[cargo] %} — {{ metas[cargo] }} lavagens para up{% else %} — possível Gerência{% endif %}</option>{% endfor %}</select>
-    <label>Impulsos nesta semana</label>
-    <select name="impulsos"><option value="0" {% if progresso.impulsos==0 %}selected{% endif %}>Sem impulso</option><option value="1" {% if progresso.impulsos==1 %}selected{% endif %}>1 Impulso</option><option value="2" {% if progresso.impulsos==2 %}selected{% endif %}>2 Impulsos</option></select>
-    <label>Meta entregue?</label>
-    <div class="choice-grid">
-      <label class="choice"><input type="radio" name="meta_entregue" value="0" {% if not progresso.meta_entregue %}checked{% endif %}><span>❌ Não</span></label>
-      <label class="choice"><input type="radio" name="meta_entregue" value="1" {% if progresso.meta_entregue %}checked{% endif %}><span>✅ Sim</span></label>
-    </div>
-    <div class="actions"><button type="submit">Salvar configurações</button></div>
-  </form>
+  <div class="stack">
+    <form method="POST" action="{{ url_for('salvar_perfil_game') }}" class="card form-card">
+      <div class="section-title"><div><h2>🎮 Perfil no Game</h2><small class="muted">Usado no Ranking, Gestão e Administração</small></div></div>
+      {% if perfil_game %}
+      <div class="game-current"><div><span>Nome atual</span><b>{{ perfil_game.nome_game }}</b></div><div><span>ID Game atual</span><b>#{{ perfil_game.id_game }}</b></div></div>
+      {% else %}
+      <div class="notice">Esta é sua primeira vinculação. Depois de salvar, qualquer alteração futura precisará ser aprovada por um ADM.</div>
+      {% endif %}
+      <label>Nome no Game</label>
+      <input name="nome_game" maxlength="100" value="{{ perfil_game.nome_game if perfil_game else '' }}" placeholder="Ex.: Sabrina Triades" required>
+      <label>ID no Game</label>
+      <input name="id_game" inputmode="numeric" maxlength="12" value="{{ perfil_game.id_game if perfil_game else '' }}" placeholder="Ex.: 8768" required>
+      {% if solicitacao_perfil %}
+      <div class="request-status pending"><b>⏳ Alteração aguardando ADM</b><span>{{ solicitacao_perfil.nome_atual }} #{{ solicitacao_perfil.id_atual }} → {{ solicitacao_perfil.nome_novo }} #{{ solicitacao_perfil.id_novo }}</span></div>
+      {% endif %}
+      <div class="actions"><button type="submit">{{ 'Solicitar alteração ao ADM' if perfil_game else 'Vincular Nome e ID' }}</button></div>
+    </form>
+
+    <form method="POST" class="card form-card">
+      <h2>Cargo e meta de Lavagem</h2>
+      <label>Cargo atual</label><select name="cargo">{% for cargo in cargos %}<option value="{{ cargo }}" {% if cargo==current_user.cargo %}selected{% endif %}>{{ cargo }}{% if metas[cargo] %} — {{ metas[cargo] }} lavagens para up{% else %} — possível Gerência{% endif %}</option>{% endfor %}</select>
+      <label>Impulsos nesta semana</label><select name="impulsos"><option value="0" {% if progresso.impulsos==0 %}selected{% endif %}>Sem impulso</option><option value="1" {% if progresso.impulsos==1 %}selected{% endif %}>1 Impulso</option><option value="2" {% if progresso.impulsos==2 %}selected{% endif %}>2 Impulsos</option></select>
+      <label>Meta entregue?</label><div class="choice-grid"><label class="choice"><input type="radio" name="meta_entregue" value="0" {% if not progresso.meta_entregue %}checked{% endif %}><span>❌ Não</span></label><label class="choice"><input type="radio" name="meta_entregue" value="1" {% if progresso.meta_entregue %}checked{% endif %}><span>✅ Sim</span></label></div>
+      <div class="actions"><button type="submit">Salvar configurações</button></div>
+    </form>
+  </div>
 
   <div class="stack">
-    <article class="card">
-      <h2>Meta da organização</h2>
-      <p><b>{{ progresso.cargo }}</b> • {{ 'Meta normal' if progresso.impulsos==0 else progresso.impulsos|string + ' Impulso' + ('s' if progresso.impulsos==2 else '') }}</p>
-      <div class="stats-grid stats-grid-3 mini-stats">
-        <div><span>Papéis</span><strong>{{ progresso.meta_org.papeis }}</strong></div>
-        <div><span>Tinta spray</span><strong>{{ progresso.meta_org.spray }}</strong></div>
-        <div><span>Dinheiro</span><strong>R$ {{ "{:,.0f}".format(progresso.meta_org.sujo).replace(",", ".") }}</strong></div>
-      </div>
-      <p class="muted"><b>Função:</b> {{ progresso.funcao }}</p>
-    </article>
-    <article class="card">
-      <h2>Progresso para up</h2>
-      <p class="muted">{{ progresso.inicio.strftime('%d/%m/%Y') }} → {{ progresso.fim_exibicao.strftime('%d/%m/%Y') }}</p>
-      {% if progresso.meta %}
-        <div class="metric-line"><b>{{ progresso.lavagens }} / {{ progresso.meta }} lavagens</b><span>{{ progresso.percentual }}%</span></div>
-        <div class="progress"><div style="width:{{ progresso.percentual }}%"></div></div>
-        <p>{{ progresso.status }}</p>
-        <p>Meta entregue: <b>{{ '✅ Sim' if progresso.meta_entregue else '❌ Não' }}</b></p>
-        {% if progresso.apto %}<div class="notice success">🟢 Apto para upamento</div>{% endif %}
-      {% else %}<h3>⭐ Doleiro</h3><p class="muted">Possível convite para Gerência.</p>{% endif %}
-    </article>
+    <article class="card"><h2>Meta da organização</h2><p><b>{{ progresso.cargo }}</b> • {{ 'Meta normal' if progresso.impulsos==0 else progresso.impulsos|string + ' Impulso' + ('s' if progresso.impulsos==2 else '') }}</p><div class="stats-grid stats-grid-3 mini-stats"><div><span>Papéis</span><strong>{{ progresso.meta_org.papeis }}</strong></div><div><span>Tinta spray</span><strong>{{ progresso.meta_org.spray }}</strong></div><div><span>Dinheiro</span><strong>R$ {{ "{:,.0f}".format(progresso.meta_org.sujo).replace(",", ".") }}</strong></div></div><p class="muted"><b>Função:</b> {{ progresso.funcao }}</p></article>
+    <article class="card"><h2>Progresso para up</h2><p class="muted">{{ progresso.inicio.strftime('%d/%m/%Y') }} → {{ progresso.fim_exibicao.strftime('%d/%m/%Y') }}</p>{% if progresso.meta %}<div class="metric-line"><b>{{ progresso.lavagens }} / {{ progresso.meta }} lavagens</b><span>{{ progresso.percentual }}%</span></div><div class="progress"><div style="width:{{ progresso.percentual }}%"></div></div><p>{{ progresso.status }}</p><p>Meta entregue: <b>{{ '✅ Sim' if progresso.meta_entregue else '❌ Não' }}</b></p>{% if progresso.apto %}<div class="notice success">🟢 Apto para upamento</div>{% endif %}{% else %}<h3>⭐ Doleiro</h3><p class="muted">Possível convite para Gerência.</p>{% endif %}</article>
+    {% if historico_solicitacoes %}<article class="card"><h2>Histórico de alterações</h2><div class="list">{% for s in historico_solicitacoes %}<div class="item"><div class="row"><b>{{ s.nome_novo }} #{{ s.id_novo }}</b><span class="status-badge status-{{ s.status }}">{{ s.status }}</span></div><small>{{ s.solicitado_em.strftime('%d/%m/%Y %H:%M') if s.solicitado_em else '' }}{% if s.motivo_recusa %} • {{ s.motivo_recusa }}{% endif %}</small></div>{% endfor %}</div></article>{% endif %}
   </div>
 </section>
 {% endblock %}
