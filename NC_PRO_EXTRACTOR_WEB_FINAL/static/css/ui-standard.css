@@ -665,3 +665,25 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
   border-color:rgba(255,192,72,.30);
   color:#efd18f;
 }
+
+
+/* =========================================================
+   FIX SIDE SCROLL — 2026-08-19
+   ========================================================= */
+@media(min-width:701px){
+  .china-app .side{
+    height:100dvh!important;
+    max-height:100dvh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(239,46,112,.65) rgba(255,255,255,.04);
+  }
+  .china-app .side::-webkit-scrollbar{width:7px}
+  .china-app .side::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px}
+  .china-app .side::-webkit-scrollbar-thumb{background:rgba(239,46,112,.58);border-radius:999px}
+  .china-app .side::-webkit-scrollbar-thumb:hover{background:rgba(239,46,112,.85)}
+  .china-app .side nav{padding-bottom:18px!important}
+}
