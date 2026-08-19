@@ -208,3 +208,378 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
 .china-app .game-admin-profile{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 14px}
 @media(max-width:900px){.china-app .request-grid{grid-template-columns:1fr}.china-app .admin-request-actions{grid-template-columns:1fr}.china-app .admin-request-actions form:last-child{grid-template-columns:1fr}.china-app .game-admin-profile{grid-template-columns:1fr}}
 @media(max-width:700px){.china-app .profile-hero{align-items:flex-start;flex-direction:column}.china-app .profile-tags{justify-content:flex-start}.china-app .profile-alert{align-items:flex-start!important;flex-direction:column}.china-app .game-current{grid-template-columns:1fr}.china-app .quick-grid.compact{grid-template-columns:1fr!important}.china-app .change-grid{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   CENTRAL ADMINISTRATIVA
+   ========================================================= */
+
+.admin-stats{
+  margin-bottom:16px;
+}
+
+.admin-members-table{
+  min-width:1050px!important;
+}
+
+.admin-game-id{
+  color:#ff79a8;
+  font-weight:800;
+}
+
+.admin-status{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:11px;
+  font-weight:850;
+}
+
+.admin-status.active{
+  color:#5ce2af;
+}
+
+.admin-status.inactive{
+  color:#ff8494;
+}
+
+.admin-activity{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.admin-activity span{
+  padding:4px 7px;
+  border:1px solid #2c2328;
+  border-radius:7px;
+  background:#0b0b0e;
+  font-size:10px;
+}
+
+.admin-actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  min-width:260px;
+}
+
+.admin-actions form{
+  margin:0;
+}
+
+.admin-btn{
+  min-height:36px!important;
+  min-width:0!important;
+  padding:7px 10px!important;
+  border-radius:8px!important;
+  font-size:10px!important;
+  font-weight:850!important;
+  white-space:nowrap!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  text-decoration:none!important;
+  cursor:pointer!important;
+}
+
+.admin-btn.secondary{
+  background:#111014!important;
+  color:#ccc1c7!important;
+  border:1px solid #382a32!important;
+}
+
+.admin-btn.success{
+  background:rgba(49,197,142,.11)!important;
+  color:#67e5b6!important;
+  border:1px solid rgba(49,197,142,.35)!important;
+}
+
+.admin-btn.warning{
+  background:rgba(255,177,65,.09)!important;
+  color:#ffc570!important;
+  border:1px solid rgba(255,177,65,.3)!important;
+}
+
+.admin-btn.danger{
+  background:rgba(244,57,91,.11)!important;
+  color:#ff7c92!important;
+  border:1px solid rgba(244,57,91,.4)!important;
+}
+
+.admin-request-list{
+  display:grid;
+  gap:10px;
+}
+
+.admin-request{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  padding:14px;
+  border:1px solid #2e2229;
+  border-radius:11px;
+  background:#0d0c10;
+}
+
+.admin-change-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+
+.admin-change-grid>div{
+  padding:9px;
+  border-radius:8px;
+  background:#111015;
+  border:1px solid #282027;
+}
+
+.admin-change-grid span{
+  display:block;
+  color:#8f858c;
+  font-size:9px;
+  text-transform:uppercase;
+}
+
+.admin-change-grid strong{
+  display:block;
+  margin-top:4px;
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+
+.admin-request-actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.admin-tools-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
+.admin-tool-card{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:12px!important;
+  min-height:108px!important;
+}
+
+.admin-tool-card>span{
+  display:grid;
+  place-items:center;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  border-radius:10px;
+  background:rgba(238,37,109,.08);
+  border:1px solid rgba(238,37,109,.18);
+  font-size:18px;
+}
+
+.admin-tool-card b{
+  display:block;
+  margin-bottom:4px;
+}
+
+.admin-tool-card p{
+  margin:0;
+  color:#9c9299;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.admin-tool-card.danger-soft{
+  border-color:rgba(244,57,91,.22)!important;
+}
+
+.admin-modal[hidden]{
+  display:none!important;
+}
+
+.admin-modal{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:grid;
+  place-items:center;
+  padding:16px;
+}
+
+.admin-modal-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.74);
+  backdrop-filter:blur(6px);
+}
+
+.admin-modal-card{
+  position:relative;
+  z-index:2;
+  width:min(500px,100%);
+  padding:24px;
+  border:1px solid rgba(244,57,91,.35);
+  border-radius:16px;
+  background:#100e13;
+  box-shadow:0 30px 90px rgba(0,0,0,.55);
+}
+
+.admin-modal-card h2{
+  margin:5px 0 10px;
+}
+
+.admin-modal-card label{
+  display:block;
+  margin:14px 0 7px;
+  font-size:11px;
+}
+
+.admin-modal-card input{
+  width:100%;
+  min-height:44px;
+  border:1px solid #3b2931;
+  border-radius:9px;
+  padding:10px 12px;
+  background:#09090c;
+  color:#fff;
+}
+
+.admin-danger-box{
+  padding:12px;
+  border:1px solid rgba(244,57,91,.28);
+  border-radius:9px;
+  background:rgba(244,57,91,.07);
+  color:#ffabb9;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.admin-modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:14px;
+}
+
+@media(max-width:1050px){
+  .admin-change-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .admin-tools-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:720px){
+  .admin-request{
+    grid-template-columns:1fr;
+  }
+
+  .admin-change-grid{
+    grid-template-columns:1fr;
+  }
+
+  .admin-request-actions{
+    width:100%;
+  }
+
+  .admin-request-actions form{
+    flex:1;
+  }
+
+  .admin-request-actions .admin-btn{
+    width:100%!important;
+  }
+
+  .admin-modal-actions{
+    flex-direction:column;
+  }
+
+  .admin-modal-actions .admin-btn{
+    width:100%!important;
+  }
+}
+
+
+/* ADMIN V3 — ADV / LOGS / CARGOS / SENHA */
+.admin-top-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:12px;
+}
+
+.adv-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.adv-summary>div{
+  padding:11px;
+  border:1px solid #2c2228;
+  border-radius:9px;
+  background:#0d0c10;
+}
+
+.adv-summary span{
+  display:block;
+  color:#8f858d;
+  font-size:9px;
+  text-transform:uppercase;
+}
+
+.adv-summary strong{
+  display:block;
+  margin-top:4px;
+  font-size:15px;
+}
+
+.admin-inline-form textarea{
+  min-height:84px!important;
+}
+
+.adv-list{
+  display:grid;
+  gap:8px;
+  margin-top:14px;
+}
+
+.adv-item{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border:1px solid #2b2127;
+  border-radius:9px;
+  background:#0d0c10;
+}
+
+.adv-item p{
+  margin:5px 0;
+  color:#d0c7cc;
+  line-height:1.45;
+}
+
+.adv-item small{
+  color:#8f858c;
+  font-size:10px;
+}
+
+@media(max-width:720px){
+  .adv-summary{
+    grid-template-columns:1fr;
+  }
+
+  .adv-item{
+    flex-direction:column;
+  }
+}

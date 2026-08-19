@@ -27,7 +27,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import bcrypt, db
-from models import Acao, Desmanche, ExtratoPonto, MetaSemanalUsuario, Operacao, PerfilGame, PerfilSetor, SolicitacaoPerfilGame, Usuario
+from models import Acao, AdvertenciaAdmin, Desmanche, ExtratoPonto, LogAdmin, MetaSemanalUsuario, Operacao, PerfilGame, PerfilSetor, SolicitacaoPerfilGame, Usuario
 
 
 logger = logging.getLogger(__name__)
@@ -252,6 +252,28 @@ def validar_dados_game(nome_game, id_game):
 def nome_membro_exibicao(usuario):
     perfil_game = obter_perfil_game(usuario.id)
     return perfil_game.nome_game if perfil_game else usuario.usuario
+
+
+
+def registrar_log_admin(acao, alvo_usuario_id=None, detalhes=None):
+    log = LogAdmin(
+        admin_id=current_user.id if current_user.is_authenticated else None,
+        alvo_usuario_id=alvo_usuario_id,
+        acao=limpar_texto(acao, 80),
+        detalhes=limpar_texto(detalhes, 1000),
+    )
+    db.session.add(log)
+
+
+def advertencias_ativas(usuario_id):
+    agora = datetime.now(timezone.utc)
+    return AdvertenciaAdmin.query.filter(
+        AdvertenciaAdmin.usuario_id == usuario_id,
+        AdvertenciaAdmin.removida.is_(False),
+        AdvertenciaAdmin.expira_em > agora,
+    ).order_by(
+        AdvertenciaAdmin.criado_em.desc()
+    ).all()
 
 
 def admin_required(funcao):
@@ -999,6 +1021,597 @@ def configurar_rotas(app):
         )
 
 
+
+    @app.route(
+        "/admin/membro/<int:usuario_id>/status",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_alterar_status_membro(usuario_id):
+        membro = db.session.get(
+            Usuario,
+            usuario_id,
+        )
+
+        if membro is None:
+            flash(
+                "Membro não encontrado.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        if membro.id == current_user.id:
+            flash(
+                "Você não pode desativar a própria conta administrativa.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        if getattr(
+            membro,
+            "is_admin",
+            False,
+        ):
+            flash(
+                "O status de outro administrador não pode ser alterado por esta tela.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        acao = limpar_texto(
+            request.form.get(
+                "acao"
+            ),
+            20,
+        )
+
+        if acao not in {
+            "ativar",
+            "desativar",
+        }:
+            flash(
+                "Ação administrativa inválida.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        membro.ativo = (
+            acao == "ativar"
+        )
+
+        registrar_log_admin(
+            "ALTERAR_STATUS",
+            membro.id,
+            f"Conta {'ativada' if membro.ativo else 'desativada'}.",
+        )
+
+        try:
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception(
+                "Erro ao alterar status do membro %s.",
+                membro.id,
+            )
+
+            flash(
+                "Não foi possível alterar o status da conta.",
+                "erro",
+            )
+
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        flash(
+            (
+                "Conta reativada com sucesso."
+                if membro.ativo
+                else "Conta desativada com sucesso."
+            ),
+            "sucesso",
+        )
+
+        return redirect(
+            url_for(
+                "admin_dashboard"
+            )
+        )
+
+
+    @app.route(
+        "/admin/membro/<int:usuario_id>/apagar",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_apagar_membro(usuario_id):
+        """
+        PD = apagar permanentemente uma conta comum.
+
+        Proteções:
+        - não permite apagar a própria conta;
+        - não permite apagar outro administrador;
+        - exige confirmação digitada: APAGAR;
+        - remove solicitações ligadas ao usuário antes da conta.
+        """
+        membro = db.session.get(
+            Usuario,
+            usuario_id,
+        )
+
+        if membro is None:
+            flash(
+                "Membro não encontrado.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        if membro.id == current_user.id:
+            flash(
+                "Você não pode apagar sua própria conta administrativa.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        if getattr(
+            membro,
+            "is_admin",
+            False,
+        ):
+            flash(
+                "Contas administrativas não podem ser apagadas por esta função.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        confirmacao = str(
+            request.form.get(
+                "confirmacao"
+            )
+            or ""
+        ).strip().upper()
+
+        if confirmacao != "APAGAR":
+            flash(
+                "Para apagar a conta, digite APAGAR na confirmação.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        nome_conta = membro.usuario
+
+        try:
+            # Solicitações possuem vínculo com o usuário e podem
+            # impedir exclusão em bancos com integridade referencial.
+            SolicitacaoPerfilGame.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            # Extratos / módulos novos
+            ExtratoPonto.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            Acao.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            Desmanche.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            PerfilGame.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            PerfilSetor.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            MetaSemanalUsuario.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            # Operações antigas normalmente usam cascade pelo relacionamento,
+            # mas removemos explicitamente para deixar a função previsível.
+            Operacao.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            registrar_log_admin(
+                "PD_APAGAR_CONTA",
+                membro.id,
+                f"Conta {nome_conta} apagada permanentemente.",
+            )
+
+            db.session.delete(
+                membro
+            )
+
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception(
+                "Erro ao apagar permanentemente a conta %s.",
+                usuario_id,
+            )
+
+            flash(
+                "Não foi possível apagar a conta. Nenhuma alteração foi concluída.",
+                "erro",
+            )
+
+            return redirect(
+                url_for(
+                    "admin_dashboard"
+                )
+            )
+
+        flash(
+            f"Conta '{nome_conta}' apagada permanentemente.",
+            "sucesso",
+        )
+
+        return redirect(
+            url_for(
+                "admin_dashboard"
+            )
+        )
+
+
+
+    @app.route(
+        "/admin/membro/<int:usuario_id>/resetar-senha",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_resetar_senha(usuario_id):
+        membro = db.session.get(Usuario, usuario_id)
+
+        if membro is None:
+            flash("Membro não encontrado.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        if getattr(membro, "is_admin", False) and membro.id != current_user.id:
+            flash("A senha de outro ADM não pode ser alterada por esta função.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        nova_senha = str(request.form.get("nova_senha") or "")
+        confirmar = str(request.form.get("confirmar_senha") or "")
+
+        if len(nova_senha) < 8:
+            flash("A nova senha deve ter pelo menos 8 caracteres.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        if nova_senha != confirmar:
+            flash("As senhas não coincidem.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        membro.senha = bcrypt.generate_password_hash(
+            nova_senha
+        ).decode("utf-8")
+
+        registrar_log_admin(
+            "RESET_SENHA",
+            membro.id,
+            f"Senha da conta {membro.usuario} redefinida.",
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível redefinir a senha.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        flash("Senha redefinida com sucesso.", "sucesso")
+        return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+
+    @app.route(
+        "/admin/membro/<int:usuario_id>/cargo-setor",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_alterar_cargo_setor(usuario_id):
+        membro = db.session.get(Usuario, usuario_id)
+
+        if membro is None:
+            flash("Membro não encontrado.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        if getattr(membro, "is_admin", False):
+            flash("Não altere cargo/setor de uma conta ADM por esta tela.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        setor = limpar_texto(request.form.get("setor"), 30)
+        perfil = PerfilSetor.query.filter_by(usuario_id=membro.id).first()
+
+        if perfil is None:
+            perfil = PerfilSetor(
+                usuario_id=membro.id,
+                setor_lavagem=False,
+                setor_acao=False,
+                cargo_acao=None,
+                impulsos_acao=0,
+                impulsos_lavagem=0,
+            )
+            db.session.add(perfil)
+
+        anterior = f"{membro.cargo} / {perfil.cargo_acao or '-'}"
+
+        if setor == "lavagem":
+            cargo = limpar_texto(request.form.get("cargo_lavagem"), 30)
+            if cargo not in CARGOS:
+                flash("Cargo de Lavagem inválido.", "erro")
+                return redirect(url_for("admin_membro", usuario_id=membro.id))
+            membro.cargo = cargo
+            perfil.setor_lavagem = True
+            perfil.setor_acao = False
+            perfil.cargo_acao = None
+
+        elif setor == "acao":
+            cargo = limpar_texto(request.form.get("cargo_acao"), 60)
+            if cargo not in CARGOS_ACAO_CADASTRO:
+                flash("Cargo de Ação inválido.", "erro")
+                return redirect(url_for("admin_membro", usuario_id=membro.id))
+            perfil.setor_lavagem = False
+            perfil.setor_acao = True
+            perfil.cargo_acao = cargo
+
+        elif setor == "gerencia":
+            cargo = limpar_texto(request.form.get("cargo_gerencia"), 60)
+            if cargo not in CARGOS_GERENCIA:
+                flash("Cargo de Gerência inválido.", "erro")
+                return redirect(url_for("admin_membro", usuario_id=membro.id))
+            perfil.setor_lavagem = False
+            perfil.setor_acao = True
+            perfil.cargo_acao = cargo
+
+        elif setor == "ambos":
+            cargo_lavagem = limpar_texto(request.form.get("cargo_lavagem"), 30)
+            cargo_acao = limpar_texto(request.form.get("cargo_acao"), 60)
+
+            if cargo_lavagem not in CARGOS:
+                flash("Cargo de Lavagem inválido.", "erro")
+                return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+            if cargo_acao not in CARGOS_ACAO_CADASTRO and cargo_acao not in CARGOS_GERENCIA:
+                flash("Cargo de Ação/Gerência inválido.", "erro")
+                return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+            membro.cargo = cargo_lavagem
+            perfil.setor_lavagem = True
+            perfil.setor_acao = True
+            perfil.cargo_acao = cargo_acao
+
+        else:
+            flash("Setor inválido.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        registrar_log_admin(
+            "ALTERAR_CARGO_SETOR",
+            membro.id,
+            f"Antes: {anterior}. Depois: {membro.cargo} / {perfil.cargo_acao or '-'}.",
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível alterar cargo/setor.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        flash("Cargo e setor atualizados.", "sucesso")
+        return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+
+    @app.route(
+        "/admin/membro/<int:usuario_id>/advertencia",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_advertir_membro(usuario_id):
+        membro = db.session.get(Usuario, usuario_id)
+
+        if membro is None:
+            flash("Membro não encontrado.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        if getattr(membro, "is_admin", False):
+            flash("Esta função não aplica ADV em contas ADM.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        motivo = limpar_texto(request.form.get("motivo"), 1000)
+        if not motivo:
+            flash("Informe o motivo da advertência.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        ativas_antes = advertencias_ativas(membro.id)
+
+        if len(ativas_antes) >= 2:
+            flash("O membro já possui 2 ADVs ativas e está em situação de PD.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        agora = datetime.now(timezone.utc)
+
+        adv = AdvertenciaAdmin(
+            usuario_id=membro.id,
+            admin_id=current_user.id,
+            motivo=motivo,
+            criado_em=agora,
+            expira_em=agora + timedelta(days=14),
+            removida=False,
+        )
+        db.session.add(adv)
+
+        registrar_log_admin(
+            "APLICAR_ADV",
+            membro.id,
+            f"ADV aplicada por 14 dias. Motivo: {motivo}",
+        )
+
+        total_ativas = len(ativas_antes) + 1
+
+        if total_ativas >= 2:
+            membro.ativo = False
+            registrar_log_admin(
+                "PD_OBRIGATORIO",
+                membro.id,
+                "Membro alcançou 2 ADVs ativas. Conta bloqueada aguardando PD.",
+            )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível registrar a advertência.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+        if total_ativas >= 2:
+            flash(
+                "2ª ADV aplicada. A conta foi bloqueada e marcada para PD.",
+                "aviso",
+            )
+        else:
+            flash(
+                "ADV aplicada. Ela expira automaticamente em 14 dias.",
+                "sucesso",
+            )
+
+        return redirect(url_for("admin_membro", usuario_id=membro.id))
+
+
+    @app.route(
+        "/admin/advertencia/<int:advertencia_id>/remover",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_remover_advertencia(advertencia_id):
+        adv = db.session.get(AdvertenciaAdmin, advertencia_id)
+
+        if adv is None:
+            flash("Advertência não encontrada.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        if adv.removida:
+            flash("Essa ADV já foi removida.", "info")
+            return redirect(url_for("admin_membro", usuario_id=adv.usuario_id))
+
+        adv.removida = True
+        adv.removida_por_admin_id = current_user.id
+        adv.removida_em = datetime.now(timezone.utc)
+
+        registrar_log_admin(
+            "REMOVER_ADV",
+            adv.usuario_id,
+            f"ADV #{adv.id} removida pelo ADM.",
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível remover a ADV.", "erro")
+            return redirect(url_for("admin_membro", usuario_id=adv.usuario_id))
+
+        flash("Advertência removida.", "sucesso")
+        return redirect(url_for("admin_membro", usuario_id=adv.usuario_id))
+
+
+    @app.route("/admin/logs")
+    @login_required
+    @admin_required
+    def admin_logs():
+        logs = LogAdmin.query.order_by(
+            LogAdmin.criado_em.desc()
+        ).limit(300).all()
+
+        linhas = []
+
+        for log in logs:
+            admin = (
+                db.session.get(Usuario, log.admin_id)
+                if log.admin_id
+                else None
+            )
+
+            alvo = (
+                db.session.get(Usuario, log.alvo_usuario_id)
+                if log.alvo_usuario_id
+                else None
+            )
+
+            linhas.append({
+                "log": log,
+                "admin": admin,
+                "alvo": alvo,
+            })
+
+        return render_template(
+            "admin_logs.html",
+            linhas=linhas,
+        )
+
+
     @app.route("/admin/membro/<int:usuario_id>")
     @login_required
     @admin_required
@@ -1064,6 +1677,15 @@ def configurar_rotas(app):
             extrato=extrato,
             pontos_acao=pontos_acao,
             pontos_lavagem=pontos_lavagem,
+            advertencias=AdvertenciaAdmin.query.filter_by(
+                usuario_id=usuario.id
+            ).order_by(
+                AdvertenciaAdmin.criado_em.desc()
+            ).limit(20).all(),
+            advertencias_ativas=advertencias_ativas(usuario.id),
+            cargos_lavagem=ORDEM_CARGOS,
+            cargos_acao=CARGOS_ACAO_CADASTRO,
+            cargos_gerencia=CARGOS_GERENCIA,
         )
 
 

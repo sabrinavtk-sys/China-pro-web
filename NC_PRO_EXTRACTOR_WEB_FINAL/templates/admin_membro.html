@@ -19,6 +19,188 @@
   <article class="card stat"><span>Cargo</span><strong class="stat-cargo">{% if perfil and perfil.setor_acao and perfil.cargo_acao %}{{ perfil.cargo_acao }}{% else %}{{ membro.cargo }}{% endif %}</strong></article>
 </section>
 
+
+<section class="content-grid content-grid-2 section-block">
+  <article class="card">
+    <span class="kicker">DISCIPLINA</span>
+    <h2>⚠️ Advertências</h2>
+
+    <div class="adv-summary">
+      <div>
+        <span>ADVs ativas</span>
+        <strong>{{ advertencias_ativas|length }} / 2</strong>
+      </div>
+      <div>
+        <span>Duração</span>
+        <strong>14 dias</strong>
+      </div>
+      <div>
+        <span>Situação</span>
+        <strong>
+          {% if advertencias_ativas|length >= 2 %}
+            🔴 PD
+          {% elif advertencias_ativas|length == 1 %}
+            🟡 1 ADV
+          {% else %}
+            🟢 Regular
+          {% endif %}
+        </strong>
+      </div>
+    </div>
+
+    <form
+      method="POST"
+      action="{{ url_for('admin_advertir_membro', usuario_id=membro.id) }}"
+      class="admin-inline-form"
+    >
+      <label>Motivo da nova ADV</label>
+      <textarea name="motivo" placeholder="Descreva o motivo..." required></textarea>
+      <div class="actions">
+        <button type="submit">Aplicar ADV por 14 dias</button>
+      </div>
+    </form>
+
+    <div class="adv-list">
+      {% for adv in advertencias %}
+      <div class="adv-item">
+        <div>
+          <b>ADV #{{ adv.id }}</b>
+          <p>{{ adv.motivo }}</p>
+          <small>
+            Aplicada: {{ adv.criado_em.astimezone().strftime('%d/%m/%Y %H:%M') }}
+            • Expira: {{ adv.expira_em.astimezone().strftime('%d/%m/%Y %H:%M') }}
+            {% if adv.removida %} • REMOVIDA{% endif %}
+          </small>
+        </div>
+
+        {% if not adv.removida %}
+        <form
+          method="POST"
+          action="{{ url_for('admin_remover_advertencia', advertencia_id=adv.id) }}"
+        >
+          <button class="btn secondary" type="submit">
+            Remover
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+      {% else %}
+      <div class="empty-state">
+        Nenhuma advertência registrada.
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="card">
+    <span class="kicker">CONTA</span>
+    <h2>🔐 Resetar senha</h2>
+
+    <form
+      method="POST"
+      action="{{ url_for('admin_resetar_senha', usuario_id=membro.id) }}"
+    >
+      <label>Nova senha</label>
+      <input
+        type="password"
+        name="nova_senha"
+        minlength="8"
+        required
+      >
+
+      <label>Confirmar nova senha</label>
+      <input
+        type="password"
+        name="confirmar_senha"
+        minlength="8"
+        required
+      >
+
+      <div class="actions">
+        <button type="submit">Resetar senha</button>
+      </div>
+    </form>
+  </article>
+</section>
+
+<section class="card section-block">
+  <span class="kicker">ORGANIZAÇÃO</span>
+  <h2>♛ Alterar setor e cargo</h2>
+
+  <form
+    method="POST"
+    action="{{ url_for('admin_alterar_cargo_setor', usuario_id=membro.id) }}"
+  >
+    <div class="form-grid">
+      <div>
+        <label>Setor</label>
+        <select name="setor">
+          <option value="lavagem">💰 Lavagem</option>
+          <option value="acao">🔫 Ação</option>
+          <option value="gerencia">👑 Gerência</option>
+          <option value="ambos">💰 + 🔫 Ambos</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Cargo de Lavagem</label>
+        <select name="cargo_lavagem">
+          {% for cargo in cargos_lavagem %}
+          <option
+            value="{{ cargo }}"
+            {% if membro.cargo == cargo %}selected{% endif %}
+          >
+            {{ cargo }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Cargo de Ação</label>
+        <select name="cargo_acao">
+          {% for cargo in cargos_acao %}
+          <option
+            value="{{ cargo }}"
+            {% if perfil and perfil.cargo_acao == cargo %}selected{% endif %}
+          >
+            {{ cargo }}
+          </option>
+          {% endfor %}
+
+          {% for cargo in cargos_gerencia %}
+          <option
+            value="{{ cargo }}"
+            {% if perfil and perfil.cargo_acao == cargo %}selected{% endif %}
+          >
+            {{ cargo }} (Gerência)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Cargo de Gerência</label>
+        <select name="cargo_gerencia">
+          {% for cargo in cargos_gerencia %}
+          <option
+            value="{{ cargo }}"
+            {% if perfil and perfil.cargo_acao == cargo %}selected{% endif %}
+          >
+            {{ cargo }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit">Salvar cargo/setor</button>
+    </div>
+  </form>
+</section>
+
 <section class="content-grid content-grid-2 section-block">
   <article class="card"><div class="section-title"><h2>💰 Últimas Lavagens</h2></div><div class="list">
   {% for op in lavagens %}<div class="item"><div class="row"><b>{{ op.nome_jogador }} #{{ op.id_jogador }}</b><span class="pill">{{ abs(op.porcentagem|float)|round|int }}%</span></div><small>R$ {{ "{:,.2f}".format(op.valor).replace(",", "X").replace(".", ",").replace("X", ".") }}</small></div>

@@ -759,3 +759,74 @@ class SolicitacaoPerfilGame(db.Model):
     solicitado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
     decidido_em = db.Column(db.DateTime(timezone=True), nullable=True)
 
+
+
+class LogAdmin(db.Model):
+    __tablename__ = "logs_admin"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    alvo_usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    acao = db.Column(db.String(80), nullable=False, index=True)
+    detalhes = db.Column(db.String(1000), nullable=True)
+    criado_em = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=agora_utc,
+        index=True,
+    )
+
+
+class AdvertenciaAdmin(db.Model):
+    __tablename__ = "advertencias_admin"
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    motivo = db.Column(db.String(1000), nullable=False)
+    criado_em = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=agora_utc,
+        index=True,
+    )
+    expira_em = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        index=True,
+    )
+    removida = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        index=True,
+    )
+    removida_por_admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    removida_em = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True,
+    )

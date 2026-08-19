@@ -1,0 +1,66 @@
+{% extends "base_gestao.html" %}
+{% block title %}Logs Administrativos — China PRO{% endblock %}
+{% block page_heading %}Logs Administrativos{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <div>
+    <span class="kicker">AUDITORIA ADM</span>
+    <h2>📜 Histórico administrativo</h2>
+    <p class="muted">
+      Ações realizadas pelos administradores ficam registradas aqui.
+    </p>
+  </div>
+
+  <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">
+    ← Voltar
+  </a>
+</section>
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>ADM</th>
+          <th>Ação</th>
+          <th>Membro</th>
+          <th>Detalhes</th>
+        </tr>
+      </thead>
+
+      <tbody>
+      {% for item in linhas %}
+        <tr>
+          <td>
+            {{ item.log.criado_em.astimezone().strftime('%d/%m/%Y %H:%M') }}
+          </td>
+          <td>
+            {{ item.admin.usuario if item.admin else '—' }}
+          </td>
+          <td>
+            <b>{{ item.log.acao }}</b>
+          </td>
+          <td>
+            {{ item.alvo.usuario if item.alvo else '—' }}
+          </td>
+          <td>
+            {{ item.log.detalhes or '—' }}
+          </td>
+        </tr>
+
+      {% else %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              Nenhuma ação administrativa registrada.
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
