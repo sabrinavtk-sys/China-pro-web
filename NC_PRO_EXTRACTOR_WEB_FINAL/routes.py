@@ -1573,7 +1573,7 @@ def configurar_rotas(app):
             flash("Não foi possível remover a ADV.", "erro")
             return redirect(url_for("admin_membro", usuario_id=adv.usuario_id))
 
-        flash("Advertência removida.", "sucesso")
+        flash("Advertência removida. Se a conta estava bloqueada por PD, reative-a manualmente apenas se for apropriado.", "sucesso")
         return redirect(url_for("admin_membro", usuario_id=adv.usuario_id))
 
 
@@ -2024,7 +2024,7 @@ def parse_data_hora(valor):
     formatos = ("%Y-%m-%dT%H:%M", "%d/%m/%Y %H:%M", "%d/%m/%Y - %H:%M")
     for formato in formatos:
         try:
-            local = datetime.strptime(texto, formato).replace(tzinfo=FUSO_GESTAO)
+            local = datetime.strptime(texto, formato).replace(tzinfo=FUSO_LOCAL)
             return local.astimezone(timezone.utc)
         except ValueError:
             continue
@@ -2059,7 +2059,7 @@ def obter_perfil(usuario_id, criar=True):
 
 
 def inicio_semana():
-    agora = datetime.now(FUSO_GESTAO)
+    agora = datetime.now(FUSO_LOCAL)
     dias = (agora.weekday() + 1) % 7
     inicio = (agora - timedelta(days=dias)).replace(hour=0, minute=0, second=0, microsecond=0)
     return inicio.astimezone(timezone.utc)
@@ -2577,58 +2577,218 @@ def configurar_rotas_gestao(app):
             periodo = "semana"
 
         inicio_periodo = None
+
         if periodo == "semana":
             inicio_periodo = inicio_semana()
-        elif periodo == "mes":
-            agora = datetime.now(FUSO_GESTAO)
-            inicio_periodo = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
-        def base_usuario_total(modelo, coluna_data, expressao_total, filtros=()):
-            consulta = db.session.query(
-                Usuario.id.label("usuario_id"),
-                Usuario.usuario.label("usuario_site"),
-                Usuario.cargo.label("cargo"),
-                PerfilGame.nome_game.label("nome_game"),
-                PerfilGame.id_game.label("id_game"),
-                expressao_total.label("total"),
-            ).join(
-                modelo,
-                modelo.usuario_id == Usuario.id,
-            ).outerjoin(
-                PerfilGame,
-                PerfilGame.usuario_id == Usuario.id,
-            ).filter(
-                Usuario.is_admin.is_(False),
-                *filtros,
+        elif periodo == "mes":
+            agora_local_ranking = datetime.now(FUSO_LOCAL)
+            inicio_periodo = agora_local_ranking.replace(
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            ).astimezone(timezone.utc)
+
+        usuarios = Usuario.query.filter(
+            Usuario.is_admin.is_(False)
+        ).order_by(
+            Usuario.usuario.asc()
+        ).all()
+
+        ids_usuarios = [
+            usuario.id
+            for usuario in usuarios
+        ]
+
+        perfis_game = {}
+        perfis_setor = {}
+
+        if ids_usuarios:
+            perfis_game = {
+                perfil.usuario_id: perfil
+                for perfil in PerfilGame.query.filter(
+                    PerfilGame.usuario_id.in_(ids_usuarios)
+                ).all()
+            }
+
+            perfis_setor = {
+                perfil.usuario_id: perfil
+                for perfil in PerfilSetor.query.filter(
+                    PerfilSetor.usuario_id.in_(ids_usuarios)
+                ).all()
+            }
+
+        consulta_lavagem = db.session.query(
+            Operacao.usuario_id,
+            func.count(Operacao.id),
+        ).filter(
+            Operacao.usuario_id.in_(ids_usuarios)
+            if ids_usuarios
+            else False
+        )
+
+        consulta_acao = db.session.query(
+            ExtratoPonto.usuario_id,
+            func.coalesce(
+                func.sum(ExtratoPonto.pontos),
+                0,
+            ),
+        ).filter(
+            ExtratoPonto.usuario_id.in_(ids_usuarios)
+            if ids_usuarios
+            else False,
+            ExtratoPonto.categoria == "acao",
+        )
+
+        consulta_desmanche = db.session.query(
+            Desmanche.usuario_id,
+            func.count(Desmanche.id),
+        ).filter(
+            Desmanche.usuario_id.in_(ids_usuarios)
+            if ids_usuarios
+            else False
+        )
+
+        if inicio_periodo is not None:
+            consulta_lavagem = consulta_lavagem.filter(
+                Operacao.criado_em >= inicio_periodo
             )
-            if inicio_periodo is not None:
-                consulta = consulta.filter(coluna_data >= inicio_periodo)
-            return consulta.group_by(
-                Usuario.id, Usuario.usuario, Usuario.cargo,
-                PerfilGame.nome_game, PerfilGame.id_game,
-            ).order_by(expressao_total.desc(), Usuario.usuario.asc()).limit(100).all()
+
+            consulta_acao = consulta_acao.filter(
+                ExtratoPonto.criado_em >= inicio_periodo
+            )
+
+            consulta_desmanche = consulta_desmanche.filter(
+                Desmanche.data_hora >= inicio_periodo
+            )
+
+        totais_lavagem = dict(
+            consulta_lavagem.group_by(
+                Operacao.usuario_id
+            ).all()
+        )
+
+        totais_acao = dict(
+            consulta_acao.group_by(
+                ExtratoPonto.usuario_id
+            ).all()
+        )
+
+        totais_desmanche = dict(
+            consulta_desmanche.group_by(
+                Desmanche.usuario_id
+            ).all()
+        )
+
+        def linha_usuario(
+            usuario,
+            total,
+        ):
+            perfil_game = perfis_game.get(
+                usuario.id
+            )
+
+            perfil_setor = perfis_setor.get(
+                usuario.id
+            )
+
+            cargo_exibido = usuario.cargo
+
+            if (
+                perfil_setor
+                and perfil_setor.setor_acao
+                and perfil_setor.cargo_acao
+            ):
+                cargo_exibido = perfil_setor.cargo_acao
+
+            return {
+                "usuario_id": usuario.id,
+                "usuario_site": usuario.usuario,
+                "nome_game": (
+                    perfil_game.nome_game
+                    if perfil_game
+                    else None
+                ),
+                "id_game": (
+                    perfil_game.id_game
+                    if perfil_game
+                    else None
+                ),
+                "cargo": cargo_exibido,
+                "total": int(
+                    total
+                    or 0
+                ),
+            }
 
         rankings = {
-            "lavagem": base_usuario_total(Operacao, Operacao.criado_em, func.count(Operacao.id)),
-            "acao": base_usuario_total(
-                ExtratoPonto,
-                ExtratoPonto.criado_em,
-                func.sum(ExtratoPonto.pontos),
-                (ExtratoPonto.categoria == "acao",),
-            ),
-            "desmanche": base_usuario_total(Desmanche, Desmanche.data_hora, func.count(Desmanche.id)),
+            "lavagem": [
+                linha_usuario(
+                    usuario,
+                    totais_lavagem.get(
+                        usuario.id,
+                        0,
+                    ),
+                )
+                for usuario in usuarios
+            ],
+            "acao": [
+                linha_usuario(
+                    usuario,
+                    totais_acao.get(
+                        usuario.id,
+                        0,
+                    ),
+                )
+                for usuario in usuarios
+            ],
+            "desmanche": [
+                linha_usuario(
+                    usuario,
+                    totais_desmanche.get(
+                        usuario.id,
+                        0,
+                    ),
+                )
+                for usuario in usuarios
+            ],
         }
 
-        ranking_rows = rankings[categoria]
+        for chave in rankings:
+            rankings[chave].sort(
+                key=lambda item: (
+                    -item["total"],
+                    (
+                        item["nome_game"]
+                        or item["usuario_site"]
+                    ).lower(),
+                )
+            )
+
+        def primeiro_com_resultado(lista):
+            for item in lista:
+                if item["total"] > 0:
+                    return item
+            return None
+
         return render_template(
             "ranking.html",
-            ranking=ranking_rows,
+            ranking=rankings[categoria],
             categoria=categoria,
             periodo=periodo,
-            top_lavagem=rankings["lavagem"][0] if rankings["lavagem"] else None,
-            top_acao=rankings["acao"][0] if rankings["acao"] else None,
-            top_desmanche=rankings["desmanche"][0] if rankings["desmanche"] else None,
+            top_lavagem=primeiro_com_resultado(
+                rankings["lavagem"]
+            ),
+            top_acao=primeiro_com_resultado(
+                rankings["acao"]
+            ),
+            top_desmanche=primeiro_com_resultado(
+                rankings["desmanche"]
+            ),
         )
+
 
     @app.route("/admin/solicitacao-perfil/<int:solicitacao_id>/<acao>", methods=["POST"])
     @login_required
@@ -2670,6 +2830,16 @@ def configurar_rotas_gestao(app):
 
             solicitacao.admin_id = current_user.id
             solicitacao.decidido_em = datetime.now(timezone.utc)
+
+            registrar_log_admin(
+                "PERFIL_GAME_APROVAR" if acao == "aprovar" else "PERFIL_GAME_RECUSAR",
+                solicitacao.usuario_id,
+                (
+                    f"Nome/ID solicitado: {solicitacao.nome_novo} "
+                    f"#{solicitacao.id_novo}. Decisão: {acao}."
+                ),
+            )
+
             db.session.commit()
             flash("Solicitação aprovada." if acao == "aprovar" else "Solicitação recusada.", "sucesso")
         except IntegrityError:

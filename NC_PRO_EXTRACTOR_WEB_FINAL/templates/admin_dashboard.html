@@ -22,7 +22,7 @@
 
 <section class="stats-grid stats-grid-4 admin-stats">
   <article class="card stat">
-    <span>Membros ativos</span>
+    <span>Membros cadastrados</span>
     <strong>{{ total_membros }}</strong>
     <small class="muted">Contas comuns cadastradas</small>
   </article>
@@ -90,9 +90,8 @@
       <div class="admin-request-actions">
         <form
           method="POST"
-          action="{{ url_for('admin_decidir_solicitacao_game', solicitacao_id=item.solicitacao.id) }}"
+          action="{{ url_for('decidir_solicitacao_perfil', solicitacao_id=item.solicitacao.id, acao='aprovar') }}"
         >
-          <input type="hidden" name="decisao" value="aprovar">
           <button class="admin-btn success" type="submit">
             ✓ Aprovar
           </button>
@@ -100,9 +99,9 @@
 
         <form
           method="POST"
-          action="{{ url_for('admin_decidir_solicitacao_game', solicitacao_id=item.solicitacao.id) }}"
+          action="{{ url_for('decidir_solicitacao_perfil', solicitacao_id=item.solicitacao.id, acao='recusar') }}"
         >
-          <input type="hidden" name="decisao" value="recusar">
+          <input type="hidden" name="motivo" value="Alteração recusada pela administração.">
           <button class="admin-btn secondary" type="submit">
             ✕ Recusar
           </button>

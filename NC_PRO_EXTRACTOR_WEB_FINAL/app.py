@@ -68,48 +68,75 @@ def garantir_colunas_compatibilidade():
 
 def garantir_admin_inicial():
     """
-    Cria/atualiza uma conta administrativa a partir das variáveis
-    ADMIN_USER e ADMIN_PASSWORD.
+    Compatibilidade opcional com ADMIN_USER / ADMIN_PASSWORD.
 
-    ADMIN_USER é opcional e usa "admin" por padrão.
-    ADMIN_PASSWORD deve ser configurada na Vercel.
+    Segurança:
+    - se já existe qualquer administrador, não cria nem promove outra conta;
+    - só funciona na instalação inicial, quando ainda há zero ADMs;
+    - a forma recomendada continua sendo /primeiro-admin.
     """
-    senha_admin = os.getenv("ADMIN_PASSWORD", "").strip()
+    from models import Usuario
+
+    admin_existente = Usuario.query.filter_by(
+        is_admin=True
+    ).first()
+
+    if admin_existente is not None:
+        return
+
+    senha_admin = os.getenv(
+        "ADMIN_PASSWORD",
+        "",
+    ).strip()
+
     if not senha_admin:
-        logger.warning(
-            "ADMIN_PASSWORD não configurada; conta admin automática não foi criada."
+        logger.info(
+            "Nenhum ADM automático configurado. "
+            "Use /primeiro-admin para a configuração inicial."
         )
         return
 
-    usuario_admin = os.getenv("ADMIN_USER", "admin").strip() or "admin"
+    usuario_admin = (
+        os.getenv(
+            "ADMIN_USER",
+            "admin",
+        ).strip()
+        or "admin"
+    )
 
-    from models import Usuario
-
-    admin = Usuario.query.filter(
-        db.func.lower(Usuario.usuario) == usuario_admin.lower()
+    conta_existente = Usuario.query.filter(
+        db.func.lower(
+            Usuario.usuario
+        )
+        == usuario_admin.lower()
     ).first()
 
-    if admin is None:
-        admin = Usuario(
-            usuario=usuario_admin,
-            senha=bcrypt.generate_password_hash(senha_admin).decode("utf-8"),
-            cargo="Funcionário",
-            ativo=True,
-            is_admin=True,
+    if conta_existente is not None:
+        # Nunca transforma silenciosamente uma conta comum em ADM.
+        logger.warning(
+            "ADMIN_USER já pertence a uma conta comum. "
+            "Promoção automática bloqueada por segurança."
         )
-        db.session.add(admin)
-        db.session.commit()
-        logger.info("Conta administrativa criada: %s", usuario_admin)
-    else:
-        alterou = False
-        if not admin.is_admin:
-            admin.is_admin = True
-            alterou = True
-        if not admin.ativo:
-            admin.ativo = True
-            alterou = True
-        if alterou:
-            db.session.commit()
+        return
+
+    admin = Usuario(
+        usuario=usuario_admin,
+        senha=bcrypt.generate_password_hash(
+            senha_admin
+        ).decode("utf-8"),
+        cargo="Funcionário",
+        ativo=True,
+        is_admin=True,
+    )
+
+    db.session.add(admin)
+    db.session.commit()
+
+    logger.info(
+        "Conta administrativa inicial criada: %s",
+        usuario_admin,
+    )
+
 
 def criar_app():
 
@@ -180,7 +207,7 @@ def criar_app():
     @login_manager.unauthorized_handler
     def api_unauthorized():
         from flask import request, jsonify, redirect, url_for
-        if request.path.startswith(("/acoes/", "/desmanches/")):
+        if request.path.startswith(("/acoes/", "/desmanches/", "/salvar-operacao")):
             return jsonify(
                 sucesso=False,
                 erro="Sua sessão expirou. Entre novamente no sistema.",
@@ -211,10 +238,10 @@ def criar_app():
     @app.errorhandler(404)
     def erro_404_api(erro):
         from flask import request, jsonify
-        if request.path.startswith(("/desmanches/", "/acoes/")):
+        if request.path.startswith(("/desmanches/", "/acoes/", "/salvar-operacao")):
             return jsonify(
                 sucesso=False,
-                erro="Endpoint de desmanche não encontrado.",
+                erro="Endpoint da API não encontrado.",
                 codigo="API_404",
             ), 404
         return erro
@@ -222,10 +249,10 @@ def criar_app():
     @app.errorhandler(405)
     def erro_405_api(erro):
         from flask import request, jsonify
-        if request.path.startswith(("/desmanches/", "/acoes/")):
+        if request.path.startswith(("/desmanches/", "/acoes/", "/salvar-operacao")):
             return jsonify(
                 sucesso=False,
-                erro="Método não permitido nesta rota de desmanche.",
+                erro="Método não permitido nesta API.",
                 codigo="API_405",
             ), 405
         return erro

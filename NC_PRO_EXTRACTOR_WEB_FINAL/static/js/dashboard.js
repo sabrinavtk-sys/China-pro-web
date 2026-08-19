@@ -1367,25 +1367,54 @@ async function salvarComprovante(){
 
         let retorno;
 
+        const contentType =
+            (
+                resposta.headers.get(
+                    "content-type"
+                )
+                || ""
+            ).toLowerCase();
 
-        try{
+        const textoResposta =
+            await resposta.text();
 
-            retorno =
-            await resposta.json();
+        if(
+            contentType.includes(
+                "application/json"
+            )
+        ){
+            try{
+                retorno =
+                    JSON.parse(
+                        textoResposta
+                    );
+            }
+            catch(erro){
+                console.error(
+                    "JSON INVÁLIDO DO SERVIDOR:",
+                    erro
+                );
 
+                throw new Error(
+                    `O servidor retornou JSON inválido (HTTP ${resposta.status}).`
+                );
+            }
         }
-        catch(erro){
-
-            console.error(
-                "RESPOSTA INVÁLIDA DO SERVIDOR:",
-                erro
-            );
-
+        else{
+            if(
+                resposta.redirected
+                || resposta.url.includes(
+                    "/login"
+                )
+            ){
+                throw new Error(
+                    "Sua sessão expirou. Entre novamente no sistema."
+                );
+            }
 
             throw new Error(
-                "O servidor retornou uma resposta inválida."
+                `O servidor respondeu em formato incorreto (HTTP ${resposta.status}).`
             );
-
         }
 
 

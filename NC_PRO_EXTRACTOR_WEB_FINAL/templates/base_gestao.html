@@ -7,7 +7,7 @@
   <title>{% block title %}China PRO{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gestao.css') }}?v=20260818b">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=20260818b">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-standard.css') }}?v=20260818b">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-standard.css') }}?v=20260819-review1">
 </head>
 <body class="china-app">
 <div class="shell">
@@ -50,6 +50,19 @@
         </div>
       </div>
     </header>
+
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+      {% if mensagens %}
+      <section class="flash-stack" aria-live="polite">
+        {% for categoria, mensagem in mensagens %}
+          <div class="flash-message flash-{{ categoria|e }}">
+            {{ mensagem }}
+          </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+    {% endwith %}
+
     {% block content %}{% endblock %}
   </main>
 </div>

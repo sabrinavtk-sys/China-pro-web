@@ -29,6 +29,13 @@
 
       {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
 
+      {% with mensagens = get_flashed_messages(with_categories=true) %}
+        {% for categoria, mensagem in mensagens %}
+          <div class="login-flash login-flash-{{ categoria|e }}">{{ mensagem }}</div>
+        {% endfor %}
+      {% endwith %}
+
+
       <form method="POST" class="login-real-form">
         <label>Usuário</label>
         <div class="login-field"><span>👤</span><input type="text" name="usuario" placeholder="Digite seu usuário" required autocomplete="username"></div>

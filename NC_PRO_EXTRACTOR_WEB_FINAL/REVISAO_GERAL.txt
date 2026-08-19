@@ -1,0 +1,16 @@
+CHINA PRO — REVISÃO GERAL
+
+Correções aplicadas:
+- Aprovação/recusa de Nome e ID Game no painel ADM corrigida.
+- Logs ADM passam a registrar aprovação/recusa de perfil.
+- Mensagens de sucesso/erro/aviso aparecem nas páginas internas.
+- Mensagens flash também aparecem no login.
+- API de Lavagem passa a tratar sessão expirada/resposta HTML sem Unexpected token '<'.
+- Unauthorized/404/405 das APIs de Lavagem, Ação e Desmanche retornam JSON.
+- Bootstrap ADMIN_USER/ADMIN_PASSWORD não promove contas comuns e não cria outro ADM se já existir um.
+- Ranking otimizado para reduzir consultas ao banco.
+- Ranking não declara Top 1 quando todos estão com zero.
+- Rótulo de membros do painel ADM corrigido.
+- Comentário antigo sobre persistência dos prints atualizado.
+- Auditoria de url_for executada: nenhum endpoint inexistente.
+- Python compilado, templates Jinja validados e JavaScript verificado.

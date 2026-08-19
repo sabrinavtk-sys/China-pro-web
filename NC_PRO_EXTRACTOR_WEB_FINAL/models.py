@@ -285,7 +285,7 @@ class Operacao(db.Model):
         nullable=True,
     )
 
-    # Versão final: imagens persistem no próprio banco.
+    # Campos mantidos por compatibilidade. A UI atual não envia os prints ao servidor.
     print_envio_dados = db.Column(
         db.LargeBinary,
         nullable=True,

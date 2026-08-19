@@ -583,3 +583,85 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
     flex-direction:column;
   }
 }
+
+
+/* RANKING FIX — usuários sempre visíveis */
+.ranking-table tbody tr td{
+  min-height:44px;
+}
+.ranking-top .game-id{
+  color:#9e939a;
+  font-size:10px;
+}
+
+
+/* =========================================================
+   REVISÃO GERAL — FEEDBACK / MENSAGENS
+   ========================================================= */
+
+.flash-stack{
+  display:grid;
+  gap:8px;
+  margin:0 0 16px;
+}
+
+.flash-message{
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid #352831;
+  background:#100e12;
+  color:#ded5da;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.flash-sucesso,
+.flash-promocao{
+  border-color:rgba(55,211,151,.30);
+  background:rgba(55,211,151,.07);
+  color:#98edca;
+}
+
+.flash-erro{
+  border-color:rgba(255,86,111,.35);
+  background:rgba(255,86,111,.08);
+  color:#ff9cad;
+}
+
+.flash-aviso{
+  border-color:rgba(255,192,72,.30);
+  background:rgba(255,192,72,.07);
+  color:#efd18f;
+}
+
+.flash-info{
+  border-color:rgba(90,153,255,.28);
+  background:rgba(90,153,255,.07);
+  color:#a8c7ff;
+}
+
+.login-flash{
+  margin:9px 0;
+  padding:10px 11px;
+  border-radius:9px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(10,10,13,.82);
+  color:#ddd3da;
+  font-size:11px;
+  line-height:1.45;
+}
+
+.login-flash-sucesso{
+  border-color:rgba(55,211,151,.30);
+  color:#99eccb;
+}
+
+.login-flash-erro{
+  border-color:rgba(255,86,111,.35);
+  color:#ff9cab;
+}
+
+.login-flash-aviso{
+  border-color:rgba(255,192,72,.30);
+  color:#efd18f;
+}
