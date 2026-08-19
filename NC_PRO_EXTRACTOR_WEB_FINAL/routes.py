@@ -268,6 +268,308 @@ def admin_required(funcao):
 
 def configurar_rotas(app):
 
+    @app.context_processor
+    def contexto_primeiro_admin():
+        """
+        Permite que a tela de login mostre o atalho somente enquanto
+        ainda não existir nenhum administrador.
+        """
+        try:
+            existe_admin = Usuario.query.filter_by(
+                is_admin=True
+            ).first() is not None
+        except Exception:
+            existe_admin = True
+
+        return {
+            "primeiro_admin_disponivel":
+                not existe_admin
+        }
+
+
+    @app.route(
+        "/primeiro-admin",
+        methods=[
+            "GET",
+            "POST",
+        ],
+    )
+    def primeiro_admin():
+        """
+        Assistente de configuração inicial.
+
+        A rota funciona SOMENTE enquanto não houver nenhum usuário
+        com is_admin=True. Assim que o primeiro ADM é criado, esta
+        página é bloqueada automaticamente.
+        """
+        admin_existente = Usuario.query.filter_by(
+            is_admin=True
+        ).first()
+
+        if admin_existente is not None:
+            flash(
+                "O administrador inicial já foi configurado.",
+                "info",
+            )
+
+            if current_user.is_authenticated:
+                return redirect(
+                    url_for(
+                        "admin_dashboard"
+                        if getattr(
+                            current_user,
+                            "is_admin",
+                            False,
+                        )
+                        else "dashboard"
+                    )
+                )
+
+            return redirect(
+                url_for(
+                    "login"
+                )
+            )
+
+        if request.method == "GET":
+            return render_template(
+                "primeiro_admin.html"
+            )
+
+        usuario = limpar_texto(
+            request.form.get(
+                "usuario"
+            ),
+            50,
+        )
+
+        nome_game = limpar_texto(
+            request.form.get(
+                "nome_game"
+            ),
+            100,
+        )
+
+        id_game = limpar_texto(
+            request.form.get(
+                "id_game"
+            ),
+            30,
+        )
+
+        senha = str(
+            request.form.get(
+                "senha"
+            )
+            or ""
+        )
+
+        confirmar = str(
+            request.form.get(
+                "confirmar_senha"
+            )
+            or ""
+        )
+
+        if (
+            not usuario
+            or not nome_game
+            or not id_game
+            or not senha
+            or not confirmar
+        ):
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "Preencha usuário, Nome no Game, "
+                    "ID no Game e as duas senhas."
+                ),
+                dados=request.form,
+            )
+
+        if len(usuario) < 3:
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "O usuário precisa ter "
+                    "pelo menos 3 caracteres."
+                ),
+                dados=request.form,
+            )
+
+        if len(nome_game) < 2:
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "Informe um Nome no Game válido."
+                ),
+                dados=request.form,
+            )
+
+        if len(senha) < 8:
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "A senha do administrador deve "
+                    "possuir pelo menos 8 caracteres."
+                ),
+                dados=request.form,
+            )
+
+        if senha != confirmar:
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "As senhas não coincidem."
+                ),
+                dados=request.form,
+            )
+
+        usuario_existente = Usuario.query.filter(
+            func.lower(
+                Usuario.usuario
+            )
+            == usuario.lower()
+        ).first()
+
+        if usuario_existente is not None:
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "Esse usuário já está sendo usado "
+                    "por outra conta."
+                ),
+                dados=request.form,
+            )
+
+        id_existente = PerfilGame.query.filter(
+            func.lower(
+                PerfilGame.id_game
+            )
+            == id_game.lower()
+        ).first()
+
+        if id_existente is not None:
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "Esse ID do Game já está vinculado "
+                    "a outra conta."
+                ),
+                dados=request.form,
+            )
+
+        # Confere novamente imediatamente antes de gravar,
+        # reduzindo a janela para criação simultânea de dois ADMs.
+        if Usuario.query.filter_by(
+            is_admin=True
+        ).first() is not None:
+            flash(
+                "Outro administrador acabou de ser criado.",
+                "info",
+            )
+            return redirect(
+                url_for(
+                    "login"
+                )
+            )
+
+        try:
+            novo_admin = Usuario(
+                usuario=usuario,
+                senha=bcrypt.generate_password_hash(
+                    senha
+                ).decode(
+                    "utf-8"
+                ),
+                # Mantém compatibilidade com a lógica antiga
+                # de cargos de Lavagem. A permissão real de ADM
+                # é controlada exclusivamente por is_admin.
+                cargo="Funcionário",
+                ativo=True,
+                is_admin=True,
+            )
+
+            db.session.add(
+                novo_admin
+            )
+
+            db.session.flush()
+
+            perfil_game = PerfilGame(
+                usuario_id=
+                    novo_admin.id,
+                nome_game=
+                    nome_game,
+                id_game=
+                    id_game,
+            )
+
+            perfil_setor = PerfilSetor(
+                usuario_id=
+                    novo_admin.id,
+                setor_lavagem=False,
+                setor_acao=False,
+                cargo_acao=None,
+                impulsos_acao=0,
+                impulsos_lavagem=0,
+            )
+
+            db.session.add(
+                perfil_game
+            )
+
+            db.session.add(
+                perfil_setor
+            )
+
+            db.session.commit()
+
+        except IntegrityError:
+            db.session.rollback()
+
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "Usuário ou ID do Game já existe. "
+                    "Use outros dados."
+                ),
+                dados=request.form,
+            )
+
+        except SQLAlchemyError:
+            db.session.rollback()
+
+            logger.exception(
+                "Erro de banco ao criar o primeiro administrador."
+            )
+
+            return render_template(
+                "primeiro_admin.html",
+                erro=(
+                    "Não foi possível criar o administrador. "
+                    "Tente novamente."
+                ),
+                dados=request.form,
+            )
+
+        login_user(
+            novo_admin,
+            remember=False,
+        )
+
+        flash(
+            "Administrador criado com sucesso.",
+            "sucesso",
+        )
+
+        return redirect(
+            url_for(
+                "admin_dashboard"
+            )
+        )
+
+
     @app.route("/")
     def inicio():
         return redirect(url_for("dashboard" if current_user.is_authenticated else "login"))
@@ -1327,63 +1629,118 @@ def configurar_rotas_gestao(app):
     @app.route("/acoes/salvar", methods=["POST"])
     @login_required
     def salvar_acao():
-        dados = request.get_json(silent=True) or {}
-
-        tipo = limpar(dados.get("tipo"), 30)
-        resultado = limpar(dados.get("resultado"), 10)
-        participantes = limpar(dados.get("participantes"), 5000)
-        responsavel = limpar(dados.get("responsavel"), 120)
-        resumo = limpar(dados.get("resumo"), 4000)
-        lucro = limpar(dados.get("lucro"), 2000) or "Nada"
-        prova_nome = limpar(dados.get("prova_nome"), 255)
-
-        if tipo not in PONTOS_ACAO:
-            return jsonify(sucesso=False, erro="Tipo de ação inválido."), 400
-        if resultado not in {"Vitória", "Derrota"}:
-            return jsonify(sucesso=False, erro="Informe Vitória ou Derrota."), 400
-        if not participantes:
-            return jsonify(sucesso=False, erro="Informe os participantes e cargos."), 400
-        if not resumo:
-            return jsonify(sucesso=False, erro="Informe um resumo da ação."), 400
-
+        """API de ações: sempre devolve JSON, inclusive em falhas inesperadas."""
         try:
-            data_hora = parse_data_hora(dados.get("data_hora"))
-            prova_hash = validar_hash(dados.get("prova_hash"))
-        except ValueError as erro:
-            return jsonify(sucesso=False, erro=str(erro)), 400
+            if not request.is_json:
+                return jsonify(
+                    sucesso=False,
+                    erro="A requisição da ação precisa ser enviada em JSON.",
+                    codigo="ACAO_JSON_INVALIDO",
+                ), 415
 
-        if not responsavel:
-            responsavel = sugerir_responsavel(participantes)
-        if not responsavel:
-            return jsonify(sucesso=False, erro="Informe o responsável oficial da ação."), 400
+            dados = request.get_json(silent=True)
+            if not isinstance(dados, dict):
+                return jsonify(
+                    sucesso=False,
+                    erro="Não foi possível ler os dados enviados.",
+                    codigo="ACAO_DADOS_INVALIDOS",
+                ), 400
 
-        pontos = PONTOS_ACAO[tipo][resultado]
+            tipo = limpar(dados.get("tipo"), 30)
+            resultado = limpar(dados.get("resultado"), 10)
+            participantes = limpar(dados.get("participantes"), 5000)
+            responsavel = limpar(dados.get("responsavel"), 120)
+            resumo = limpar(dados.get("resumo"), 4000)
+            lucro = limpar(dados.get("lucro"), 2000) or "Nada"
+            prova_nome = limpar(dados.get("prova_nome"), 255)
 
-        assinatura = fingerprint(
-            current_user.id,
-            tipo,
-            data_hora.isoformat(),
-            participantes,
-            resultado,
-            prova_hash,
-        )
+            if tipo not in PONTOS_ACAO:
+                return jsonify(
+                    sucesso=False,
+                    erro="Tipo de ação inválido.",
+                    codigo="ACAO_TIPO_INVALIDO",
+                ), 400
 
-        acao = Acao(
-            usuario_id=current_user.id,
-            tipo=tipo,
-            data_hora=data_hora,
-            participantes=participantes,
-            responsavel=responsavel,
-            resumo=resumo,
-            resultado=resultado,
-            lucro=lucro,
-            pontos=pontos,
-            prova_hash=prova_hash,
-            prova_nome=prova_nome or "print-final",
-            fingerprint=assinatura,
-        )
+            if resultado not in {"Vitória", "Derrota"}:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe Vitória ou Derrota.",
+                    codigo="ACAO_RESULTADO_INVALIDO",
+                ), 400
 
-        try:
+            if not participantes:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe os participantes e cargos.",
+                    codigo="ACAO_PARTICIPANTES_OBRIGATORIOS",
+                ), 400
+
+            if not resumo:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe um resumo da ação.",
+                    codigo="ACAO_RESUMO_OBRIGATORIO",
+                ), 400
+
+            try:
+                data_hora = parse_data_hora(dados.get("data_hora"))
+                prova_hash = validar_hash(dados.get("prova_hash"))
+            except ValueError as erro:
+                return jsonify(
+                    sucesso=False,
+                    erro=str(erro),
+                    codigo="ACAO_VALIDACAO",
+                ), 400
+
+            if not responsavel:
+                responsavel = sugerir_responsavel(participantes)
+
+            if not responsavel:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe o responsável oficial da ação.",
+                    codigo="ACAO_RESPONSAVEL_OBRIGATORIO",
+                ), 400
+
+            pontos = PONTOS_ACAO[tipo][resultado]
+
+            assinatura = fingerprint(
+                current_user.id,
+                tipo,
+                data_hora.isoformat(),
+                participantes,
+                resultado,
+                prova_hash,
+            )
+
+            existente = Acao.query.filter_by(
+                usuario_id=current_user.id,
+                fingerprint=assinatura,
+            ).first()
+
+            if existente:
+                return jsonify(
+                    sucesso=False,
+                    duplicado=True,
+                    erro="Esta ação já foi registrada.",
+                    codigo="ACAO_DUPLICADA",
+                ), 409
+
+            acao = Acao(
+                usuario_id=current_user.id,
+                tipo=tipo,
+                data_hora=data_hora,
+                participantes=participantes,
+                responsavel=responsavel,
+                resumo=resumo,
+                resultado=resultado,
+                lucro=lucro,
+                pontos=pontos,
+                prova_hash=prova_hash,
+                prova_nome=prova_nome or "print-final",
+                fingerprint=assinatura,
+            )
+
             db.session.add(acao)
             db.session.flush()
             db.session.add(ExtratoPonto(
@@ -1396,18 +1753,39 @@ def configurar_rotas_gestao(app):
                 criado_em=data_hora,
             ))
             db.session.commit()
+
+            return jsonify(
+                sucesso=True,
+                pontos=pontos,
+                id=acao.id,
+            ), 201
+
         except IntegrityError:
             db.session.rollback()
             return jsonify(
                 sucesso=False,
                 duplicado=True,
-                erro="Esta ação parece já ter sido registrada. O salvamento foi bloqueado."
+                erro="Esta ação parece já ter sido registrada.",
+                codigo="ACAO_DUPLICADA",
             ), 409
+
         except SQLAlchemyError:
             db.session.rollback()
-            return jsonify(sucesso=False, erro="Não foi possível salvar a ação."), 500
+            logger.exception("Erro de banco ao salvar ação")
+            return jsonify(
+                sucesso=False,
+                erro="O banco de dados recusou o registro da ação.",
+                codigo="ACAO_BANCO",
+            ), 500
 
-        return jsonify(sucesso=True, pontos=pontos, id=acao.id)
+        except Exception:
+            db.session.rollback()
+            logger.exception("Erro inesperado ao salvar ação")
+            return jsonify(
+                sucesso=False,
+                erro="O servidor encontrou um erro ao salvar a ação.",
+                codigo="ACAO_SERVIDOR",
+            ), 500
 
     @app.route("/desmanches")
     @login_required
@@ -1425,49 +1803,100 @@ def configurar_rotas_gestao(app):
     @app.route("/desmanches/salvar", methods=["POST"])
     @login_required
     def salvar_desmanche():
-        dados = request.get_json(silent=True) or {}
-        modelo = limpar(dados.get("modelo"), 100)
-        destino = limpar(dados.get("destino_pontos"), 20)
-        prova_nome = limpar(dados.get("prova_nome"), 255)
-
-        if not modelo:
-            return jsonify(sucesso=False, erro="O modelo do veículo é obrigatório."), 400
-        if destino not in {"acao", "lavagem"}:
-            return jsonify(sucesso=False, erro="Escolha Ação ou Lavagem para receber os pontos."), 400
-
+        """
+        API de desmanche.
+        IMPORTANTE: esta rota sempre responde JSON, inclusive em erros inesperados,
+        para o front-end nunca receber HTML e quebrar no response.json().
+        """
         try:
-            data_hora = parse_data_hora(dados.get("data_hora"))
-            quantidade = decimal_positivo(dados.get("quantidade"), "Quantidade recebida")
-            prova_hash = validar_hash(dados.get("prova_hash"))
-        except ValueError as erro:
-            return jsonify(sucesso=False, erro=str(erro)), 400
+            if not request.is_json:
+                return jsonify(
+                    sucesso=False,
+                    erro="A requisição do desmanche precisa ser enviada em JSON.",
+                    codigo="DESMANCHE_JSON_INVALIDO",
+                ), 415
 
-        pontos = 2 if destino == "acao" else 1
-        assinatura = fingerprint(
-            current_user.id,
-            modelo,
-            data_hora.isoformat(),
-            quantidade,
-            destino,
-            prova_hash,
-        )
+            dados = request.get_json(silent=True)
+            if not isinstance(dados, dict):
+                return jsonify(
+                    sucesso=False,
+                    erro="Não foi possível ler os dados enviados.",
+                    codigo="DESMANCHE_DADOS_INVALIDOS",
+                ), 400
 
-        registro = Desmanche(
-            usuario_id=current_user.id,
-            modelo=modelo,
-            data_hora=data_hora,
-            quantidade=quantidade,
-            destino_pontos=destino,
-            pontos=pontos,
-            prova_hash=prova_hash,
-            prova_nome=prova_nome or "print-desmanche",
-            fingerprint=assinatura,
-        )
+            modelo = limpar(dados.get("modelo"), 100)
+            destino = limpar(dados.get("destino_pontos"), 20)
+            prova_nome = limpar(dados.get("prova_nome"), 255)
 
-        try:
+            if not modelo:
+                return jsonify(
+                    sucesso=False,
+                    erro="O modelo do veículo é obrigatório.",
+                    codigo="DESMANCHE_MODELO_OBRIGATORIO",
+                ), 400
+
+            if destino not in {"acao", "lavagem"}:
+                return jsonify(
+                    sucesso=False,
+                    erro="Escolha Ação ou Lavagem para receber os pontos.",
+                    codigo="DESMANCHE_DESTINO_INVALIDO",
+                ), 400
+
+            try:
+                data_hora = parse_data_hora(dados.get("data_hora"))
+                quantidade = decimal_positivo(
+                    dados.get("quantidade"),
+                    "Quantidade recebida",
+                )
+                prova_hash = validar_hash(dados.get("prova_hash"))
+            except ValueError as erro:
+                return jsonify(
+                    sucesso=False,
+                    erro=str(erro),
+                    codigo="DESMANCHE_VALIDACAO",
+                ), 400
+
+            pontos = 2 if destino == "acao" else 1
+
+            assinatura = fingerprint(
+                current_user.id,
+                modelo,
+                data_hora.isoformat(),
+                quantidade,
+                destino,
+                prova_hash,
+            )
+
+            # Verificação antecipada deixa a mensagem de duplicidade mais clara
+            existente = Desmanche.query.filter_by(
+                usuario_id=current_user.id,
+                fingerprint=assinatura,
+            ).first()
+
+            if existente:
+                return jsonify(
+                    sucesso=False,
+                    duplicado=True,
+                    erro="Este desmanche já foi registrado.",
+                    codigo="DESMANCHE_DUPLICADO",
+                ), 409
+
+            registro = Desmanche(
+                usuario_id=current_user.id,
+                modelo=modelo,
+                data_hora=data_hora,
+                quantidade=quantidade,
+                destino_pontos=destino,
+                pontos=pontos,
+                prova_hash=prova_hash,
+                prova_nome=prova_nome or "print-desmanche",
+                fingerprint=assinatura,
+            )
+
             db.session.add(registro)
             db.session.flush()
-            db.session.add(ExtratoPonto(
+
+            extrato = ExtratoPonto(
                 usuario_id=current_user.id,
                 origem_tipo="desmanche",
                 origem_id=registro.id,
@@ -1475,20 +1904,44 @@ def configurar_rotas_gestao(app):
                 pontos=pontos,
                 descricao=f"Desmanche {modelo}",
                 criado_em=data_hora,
-            ))
+            )
+
+            db.session.add(extrato)
             db.session.commit()
+
+            return jsonify(
+                sucesso=True,
+                pontos=pontos,
+                id=registro.id,
+            ), 201
+
         except IntegrityError:
             db.session.rollback()
             return jsonify(
                 sucesso=False,
                 duplicado=True,
-                erro="Este desmanche parece já ter sido registrado. O salvamento foi bloqueado."
+                erro="Este desmanche parece já ter sido registrado.",
+                codigo="DESMANCHE_DUPLICADO",
             ), 409
-        except SQLAlchemyError:
-            db.session.rollback()
-            return jsonify(sucesso=False, erro="Não foi possível salvar o desmanche."), 500
 
-        return jsonify(sucesso=True, pontos=pontos, id=registro.id)
+        except SQLAlchemyError as erro:
+            db.session.rollback()
+            logger.exception("Erro de banco ao salvar desmanche")
+            return jsonify(
+                sucesso=False,
+                erro="O banco de dados recusou o registro. Tente novamente.",
+                codigo="DESMANCHE_BANCO",
+            ), 500
+
+        except Exception as erro:
+            db.session.rollback()
+            logger.exception("Erro inesperado ao salvar desmanche")
+            return jsonify(
+                sucesso=False,
+                erro="O servidor encontrou um erro ao salvar o desmanche.",
+                codigo="DESMANCHE_SERVIDOR",
+            ), 500
+
 
     @app.route("/ranking")
     @login_required

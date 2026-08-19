@@ -177,6 +177,17 @@ def criar_app():
             usuario_id,
         )
 
+    @login_manager.unauthorized_handler
+    def api_unauthorized():
+        from flask import request, jsonify, redirect, url_for
+        if request.path.startswith(("/acoes/", "/desmanches/")):
+            return jsonify(
+                sucesso=False,
+                erro="Sua sessão expirou. Entre novamente no sistema.",
+                codigo="SESSAO_EXPIRADA",
+            ), 401
+        return redirect(url_for("login"))
+
     # =====================================================
     # ROTAS
     # =====================================================
@@ -190,6 +201,34 @@ def criar_app():
     configurar_rotas_gestao(
         app
     )
+
+
+
+    # =====================================================
+    # ERROS DAS APIS — SEM HTML
+    # =====================================================
+
+    @app.errorhandler(404)
+    def erro_404_api(erro):
+        from flask import request, jsonify
+        if request.path.startswith(("/desmanches/", "/acoes/")):
+            return jsonify(
+                sucesso=False,
+                erro="Endpoint de desmanche não encontrado.",
+                codigo="API_404",
+            ), 404
+        return erro
+
+    @app.errorhandler(405)
+    def erro_405_api(erro):
+        from flask import request, jsonify
+        if request.path.startswith(("/desmanches/", "/acoes/")):
+            return jsonify(
+                sucesso=False,
+                erro="Método não permitido nesta rota de desmanche.",
+                codigo="API_405",
+            ), 405
+        return erro
 
 
     # =====================================================

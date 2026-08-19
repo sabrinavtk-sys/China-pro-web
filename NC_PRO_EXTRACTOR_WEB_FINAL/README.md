@@ -83,3 +83,21 @@ O admin acessa normalmente pela tela de login e verá o menu "Administração".
 
 ## UI China PRO 2026
 Interface unificada preto/rosa/dourado aplicada a login, cadastro, dashboard e módulos de gestão. O Cassino da China aparece apenas como teaser bloqueado (Em breve), sem funcionalidade ativa.
+
+
+## Primeiro Administrador
+
+Enquanto não existir nenhum usuário com permissão de ADM, a tela de login
+mostra o link "Configurar primeiro Administrador".
+
+Rota:
+`/primeiro-admin`
+
+A tela solicita:
+- Usuário do ADM
+- Senha e confirmação
+- Nome no Game
+- ID no Game
+
+Após a primeira conta ADM ser criada, a rota se bloqueia automaticamente.
+O cadastro público nunca oferece o cargo Administrador.

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08080c">
+  <title>China PRO — Primeiro Administrador</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=20260819-admin">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/setup-admin.css') }}?v=20260819-admin">
+</head>
+<body class="setup-admin-body">
+  <main class="setup-admin-shell">
+    <section class="setup-admin-card">
+      <header class="setup-admin-head">
+        <img
+          src="{{ url_for('static', filename='img/china-logo-user-web.jpg') }}"
+          alt="China PRO"
+        >
+        <div>
+          <span>CONFIGURAÇÃO INICIAL</span>
+          <h1>Criar primeiro Administrador</h1>
+          <p>
+            Esta página é desativada automaticamente
+            assim que o primeiro ADM for criado.
+          </p>
+        </div>
+      </header>
+
+      <div class="setup-security">
+        🛡️ <b>Conta protegida:</b>
+        “Administrador” não aparece no cadastro público.
+      </div>
+
+      {% if erro %}
+      <div class="setup-error">
+        {{ erro }}
+      </div>
+      {% endif %}
+
+      <form method="POST" class="setup-admin-form">
+        <div class="setup-section">
+          <div class="setup-section-title">
+            <b>1. Dados da conta</b>
+            <small>Usados para entrar no China PRO</small>
+          </div>
+
+          <label for="usuario">Usuário do ADM</label>
+          <input
+            id="usuario"
+            name="usuario"
+            type="text"
+            value="{{ dados.get('usuario','') if dados else '' }}"
+            placeholder="Ex.: admin"
+            required
+            minlength="3"
+            maxlength="50"
+            autocomplete="username"
+          >
+
+          <div class="setup-grid">
+            <div>
+              <label for="senha">Senha</label>
+              <input
+                id="senha"
+                name="senha"
+                type="password"
+                placeholder="Mínimo 8 caracteres"
+                required
+                minlength="8"
+                autocomplete="new-password"
+              >
+            </div>
+
+            <div>
+              <label for="confirmar_senha">Confirmar senha</label>
+              <input
+                id="confirmar_senha"
+                name="confirmar_senha"
+                type="password"
+                placeholder="Repita a senha"
+                required
+                minlength="8"
+                autocomplete="new-password"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="setup-section">
+          <div class="setup-section-title">
+            <b>2. Perfil no Game</b>
+            <small>Identificação que aparecerá no sistema</small>
+          </div>
+
+          <div class="setup-grid">
+            <div>
+              <label for="nome_game">Nome no Game</label>
+              <input
+                id="nome_game"
+                name="nome_game"
+                type="text"
+                value="{{ dados.get('nome_game','') if dados else '' }}"
+                placeholder="Seu nome no MTA"
+                required
+                maxlength="100"
+              >
+            </div>
+
+            <div>
+              <label for="id_game">ID no Game</label>
+              <input
+                id="id_game"
+                name="id_game"
+                type="text"
+                value="{{ dados.get('id_game','') if dados else '' }}"
+                placeholder="Ex.: 106353"
+                required
+                maxlength="30"
+                inputmode="numeric"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="setup-warning">
+          Após criar esta conta, a rota de configuração inicial
+          ficará bloqueada. Novos administradores deverão ser
+          gerenciados pelo sistema administrativo.
+        </div>
+
+        <button type="submit" class="setup-submit">
+          🛡️ CRIAR ADMINISTRADOR
+        </button>
+      </form>
+
+      <a class="setup-back" href="{{ url_for('login') }}">
+        ← Voltar para o login
+      </a>
+    </section>
+  </main>
+</body>
+</html>

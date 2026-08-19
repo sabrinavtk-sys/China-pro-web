@@ -46,7 +46,7 @@
         <img class="china-profile-img" src="{{ url_for('static', filename='img/china-logo-user-web.jpg') }}" alt="China">
         <div>
           <b>{{ current_user.usuario }}</b>
-          <small>{{ current_user.cargo }}</small>
+          <small>{% if current_user.is_admin %}Administrador{% else %}{{ current_user.cargo }}{% endif %}</small>
         </div>
       </div>
     </header>

@@ -44,6 +44,15 @@
       </form>
 
       <a class="login-create" href="{{ url_for('cadastro') }}">Não tem uma conta? <b>Criar agora</b></a>
+      {% if primeiro_admin_disponivel %}
+      <a
+        class="login-create"
+        style="margin-top:9px;color:#ff8fb5"
+        href="{{ url_for('primeiro_admin') }}"
+      >
+        🛡️ Configurar <b>primeiro Administrador</b>
+      </a>
+      {% endif %}
     </section>
 
     <section class="login-feature-grid" aria-label="Recursos do sistema">
