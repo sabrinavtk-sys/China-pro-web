@@ -1,0 +1,37 @@
+{% extends "base_gestao.html" %}
+{% block title %}Gestão — China PRO{% endblock %}
+{% block page_heading %}Gestão{% endblock %}
+{% block content %}
+<section class="page-intro"><div><span class="kicker">CENTRAL PESSOAL</span><h2>{{ perfil_game.nome_game if perfil_game else current_user.usuario }}</h2><p class="muted">Seu perfil, metas, posições e atividades em um único lugar.</p></div><a class="btn secondary" href="{{ url_for('configuracoes') }}">⚙ Editar perfil</a></section>
+
+{% if not perfil_game %}<section class="notice profile-alert"><b>🎮 Complete seu perfil do game</b><span>Cadastre seu Nome no Game e ID do Game para aparecer corretamente nos rankings.</span><a class="btn" href="{{ url_for('configuracoes') }}">Configurar agora</a></section>{% endif %}
+{% if solicitacao_perfil %}<section class="notice profile-alert pending"><b>⏳ Alteração de perfil aguardando ADM</b><span>Solicitado: {{ solicitacao_perfil.nome_novo }} #{{ solicitacao_perfil.id_novo }}. Até a aprovação, os dados atuais continuam valendo.</span></section>{% endif %}
+
+<section class="profile-hero card">
+  <div class="profile-identity"><div class="profile-avatar">{{ (perfil_game.nome_game if perfil_game else current_user.usuario)[:1]|upper }}</div><div><span class="kicker">PERFIL DO MEMBRO</span><h2>{{ perfil_game.nome_game if perfil_game else 'Nome no Game não configurado' }}</h2><p>{% if perfil_game %}ID Game <b>#{{ perfil_game.id_game }}</b>{% else %}Usuário do site: <b>{{ current_user.usuario }}</b>{% endif %}</p></div></div>
+  <div class="profile-tags"><span class="pill">💰 {{ current_user.cargo }}</span>{% if perfil.cargo_acao %}<span class="pill">🔫 {{ perfil.cargo_acao }}</span>{% endif %}</div>
+</section>
+
+<section class="stats-grid stats-grid-4 section-block">
+  <article class="card stat"><span>Lavagens • semana</span><strong>{{ lavagens_semana }}</strong><small class="muted">R$ {{ "{:,.0f}".format(valor_semana).replace(",", ".") }} processados</small></article>
+  <article class="card stat"><span>Ações • semana</span><strong>{{ acoes_semana }}</strong><small class="muted">{{ pontos_acao }} pontos</small></article>
+  <article class="card stat"><span>Desmanches • semana</span><strong>{{ desmanches_semana }}</strong><small class="muted">Registros realizados</small></article>
+  <article class="card stat"><span>Pontos Lavagem</span><strong>{{ pontos_lavagem }}</strong><small class="muted">Vindos de desmanches</small></article>
+</section>
+
+<section class="content-grid content-grid-2 section-block">
+  <article class="card"><div class="section-title"><div><h2>🎯 Meta de Lavagem</h2><small class="muted">{{ meta_lavagem.cargo }}</small></div></div>{% if meta_lavagem.meta %}<div class="metric-line"><b>{{ meta_lavagem.lavagens }} / {{ meta_lavagem.meta }} lavagens</b><span>{{ meta_lavagem.percentual }}%</span></div><div class="progress"><div style="width:{{ meta_lavagem.percentual }}%"></div></div><p class="muted">{{ meta_lavagem.status }}</p>{% else %}<div class="notice">Cargo sem meta de quantidade para upamento.</div>{% endif %}</article>
+  <article class="card"><div class="section-title"><div><h2>🔫 Meta de Ação</h2><small class="muted">{{ perfil.cargo_acao or 'Sem cargo de Ação' }}</small></div></div>{% if perfil.setor_acao and meta_acao and meta_acao.pontos %}<div class="metric-line"><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b><span>{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%</span></div><div class="progress"><div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div></div><p class="muted">Papéis {{ meta_acao.papeis or '—' }} • Spray {{ meta_acao.spray or '—' }} • R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}</p>{% else %}<div class="notice">Ative o setor de Ação e selecione um cargo com meta para acompanhar aqui.</div>{% endif %}</article>
+</section>
+
+<section class="grid three section-block rank-position-grid">
+  <a class="card rank-position" href="{{ url_for('ranking', categoria='lavagem', periodo='semana') }}"><span>💰 Ranking Lavagem</span><strong>{{ posicoes.lavagem|string + 'º' if posicoes.lavagem else '—' }}</strong><small>posição semanal</small></a>
+  <a class="card rank-position" href="{{ url_for('ranking', categoria='acao', periodo='semana') }}"><span>🔫 Ranking Ação</span><strong>{{ posicoes.acao|string + 'º' if posicoes.acao else '—' }}</strong><small>posição semanal</small></a>
+  <a class="card rank-position" href="{{ url_for('ranking', categoria='desmanche', periodo='semana') }}"><span>🚗 Ranking Desmanche</span><strong>{{ posicoes.desmanche|string + 'º' if posicoes.desmanche else '—' }}</strong><small>posição semanal</small></a>
+</section>
+
+<section class="content-grid content-grid-2 section-block">
+  <article class="card"><div class="section-title"><div><h2>🕘 Atividades recentes</h2><small class="muted">Lavagens, ações e desmanches</small></div></div><div class="list">{% for a in atividades %}<div class="item"><div class="row"><b>{{ a.icone }} {{ a.tipo }}</b><span class="pill">{{ a.data.strftime('%d/%m %H:%M') if a.data else '' }}</span></div><small>{{ a.titulo }}</small></div>{% else %}<div class="empty-state">Você ainda não possui atividades.</div>{% endfor %}</div></article>
+  <article class="card"><div class="section-title"><h2>⚡ Acesso rápido</h2></div><div class="quick-grid compact"><a class="quick-card" href="{{ url_for('dashboard') }}"><span class="quick-icon">💰</span><strong>Nova Lavagem</strong></a><a class="quick-card" href="{{ url_for('acoes') }}"><span class="quick-icon">🔫</span><strong>Nova Ação</strong></a><a class="quick-card" href="{{ url_for('desmanches') }}"><span class="quick-icon">🚗</span><strong>Novo Desmanche</strong></a><a class="quick-card" href="{{ url_for('ranking') }}"><span class="quick-icon">🏆</span><strong>Ranking</strong></a></div></article>
+</section>
+{% endblock %}

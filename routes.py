@@ -1,3 +1,6 @@
+from functools import wraps
+import hashlib
+import re
 import logging
 import base64
 import binascii
@@ -24,7 +27,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import bcrypt, db
-from models import MetaSemanalUsuario, Operacao, Usuario
+from models import Acao, Desmanche, ExtratoPonto, MetaSemanalUsuario, Operacao, PerfilGame, PerfilSetor, SolicitacaoPerfilGame, Usuario
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +43,22 @@ CARGOS = {
 }
 
 ORDEM_CARGOS = list(CARGOS.keys())
+
+CARGOS_ACAO_CADASTRO = [
+    "Lanterninha",
+    "Olheiro",
+    "Cobrador",
+    "Soldado",
+    "Capanga",
+    "Tenente de Rua",
+]
+
+CARGOS_GERENCIA = [
+    "Sub Gerente",
+    "Chefe de Setor",
+    "Alto Conselho",
+]
+
 METAS_ORGANIZACAO = {
  "Funcionário":{"normal":(100,100,5000000),"1":(80,80,4000000),"2":(50,50,2500000)},
  "Vendedor":{"normal":(90,90,4500000),"1":(72,72,3600000),"2":(45,45,2225000)},
@@ -206,6 +225,47 @@ def resumo_meta_semanal(usuario):
     }
 
 
+
+
+def obter_perfil_game(usuario_id):
+    return PerfilGame.query.filter_by(usuario_id=usuario_id).first()
+
+
+def obter_solicitacao_perfil_pendente(usuario_id):
+    return SolicitacaoPerfilGame.query.filter_by(
+        usuario_id=usuario_id,
+        status="pendente",
+    ).order_by(SolicitacaoPerfilGame.solicitado_em.desc()).first()
+
+
+def validar_dados_game(nome_game, id_game):
+    nome = limpar_texto(nome_game, 100)
+    identificador = limpar_texto(id_game, 30)
+
+    if len(nome) < 2:
+        raise ValueError("Informe seu nome no game.")
+    if not re.fullmatch(r"[0-9]{1,12}", identificador):
+        raise ValueError("O ID do game deve conter somente números.")
+    return nome, identificador
+
+
+def nome_membro_exibicao(usuario):
+    perfil_game = obter_perfil_game(usuario.id)
+    return perfil_game.nome_game if perfil_game else usuario.usuario
+
+
+def admin_required(funcao):
+    @wraps(funcao)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("login"))
+        if not getattr(current_user, "is_admin", False):
+            flash("Acesso restrito à administração.", "erro")
+            return redirect(url_for("dashboard"))
+        return funcao(*args, **kwargs)
+    return wrapper
+
+
 def configurar_rotas(app):
 
     @app.route("/")
@@ -217,41 +277,83 @@ def configurar_rotas(app):
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
         if request.method == "GET":
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS)
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA)
 
         usuario = limpar_texto(request.form.get("usuario"), 50)
         senha = str(request.form.get("senha") or "")
         confirmar_senha = str(request.form.get("confirmar_senha") or "")
-        cargo = limpar_texto(request.form.get("cargo"), 30)
+        cargo_selecionado = limpar_texto(
+            request.form.get("cargo"),
+            80,
+        )
 
-        if not usuario or not senha or not confirmar_senha or cargo not in CARGOS:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Preencha todos os campos e selecione seu cargo atual.")
+        setor_cadastro = ""
+        cargo_lavagem = None
+        cargo_acao = None
+
+        if cargo_selecionado.startswith("lavagem:"):
+            cargo_lavagem = cargo_selecionado.split(":", 1)[1].strip()
+            if cargo_lavagem in CARGOS:
+                setor_cadastro = "lavagem"
+
+        elif cargo_selecionado.startswith("acao:"):
+            cargo_acao = cargo_selecionado.split(":", 1)[1].strip()
+            if cargo_acao in CARGOS_ACAO_CADASTRO:
+                setor_cadastro = "acao"
+
+        elif cargo_selecionado.startswith("gerencia:"):
+            cargo_acao = cargo_selecionado.split(":", 1)[1].strip()
+            if cargo_acao in CARGOS_GERENCIA:
+                setor_cadastro = "gerencia"
+
+        if not usuario or not senha or not confirmar_senha or not setor_cadastro:
+            return render_template(
+                "cadastro.html",
+                cargos_lavagem=ORDEM_CARGOS,
+                cargos_acao=CARGOS_ACAO_CADASTRO,
+                cargos_gerencia=CARGOS_GERENCIA,
+                erro="Preencha todos os campos e selecione seu cargo atual.",
+            )
         if len(usuario) < 3:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="O nome de usuário deve possuir pelo menos 3 caracteres.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="O nome de usuário deve possuir pelo menos 3 caracteres.")
         if len(senha) < 6:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="A senha deve possuir pelo menos 6 caracteres.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="A senha deve possuir pelo menos 6 caracteres.")
         if senha != confirmar_senha:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="As senhas não coincidem.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="As senhas não coincidem.")
 
         usuario_existente = Usuario.query.filter(func.lower(Usuario.usuario) == usuario.lower()).first()
         if usuario_existente:
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Este usuário já existe.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Este usuário já existe.")
 
         novo_usuario = Usuario(
             usuario=usuario,
             senha=bcrypt.generate_password_hash(senha).decode("utf-8"),
-            cargo=cargo,
+            # Mantém compatibilidade com o sistema antigo de Lavagem.
+            # Para contas de Ação, o cargo real fica em PerfilSetor.
+            cargo=cargo_lavagem if setor_cadastro == "lavagem" else "Funcionário",
         )
         try:
             db.session.add(novo_usuario)
+            db.session.flush()
+
+            perfil = PerfilSetor(
+                usuario_id=novo_usuario.id,
+                setor_lavagem=(setor_cadastro == "lavagem"),
+                setor_acao=(setor_cadastro in ("acao", "gerencia")),
+                cargo_acao=cargo_acao if setor_cadastro in ("acao", "gerencia") else None,
+                impulsos_acao=0,
+                impulsos_lavagem=0,
+            )
+            db.session.add(perfil)
+
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Este usuário já existe.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Este usuário já existe.")
         except SQLAlchemyError:
             db.session.rollback()
             logger.exception("Erro de banco ao cadastrar usuário.")
-            return render_template("cadastro.html", cargos=ORDEM_CARGOS, erro="Não foi possível concluir o cadastro.")
+            return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Não foi possível concluir o cadastro.")
 
         flash("Conta criada com sucesso. Entre com seu usuário e senha.", "sucesso")
         return redirect(url_for("login"))
@@ -296,7 +398,10 @@ def configurar_rotas(app):
         ganhos_total = db.session.query(func.coalesce(func.sum(Operacao.valor_porcentagem), 0)).filter(Operacao.usuario_id == current_user.id).scalar()
         ultimas_operacoes = consulta_usuario.order_by(Operacao.criado_em.desc(), Operacao.id.desc()).limit(10).all()
         progresso = resumo_meta_semanal(current_user)
-        data_hoje = agora_local().strftime("%d/%m/%Y %H:%M")
+        data_hoje = agora_local().strftime("%d/%m/%Y")
+        total_acoes = Acao.query.filter_by(usuario_id=current_user.id).count()
+        total_desmanches = Desmanche.query.filter_by(usuario_id=current_user.id).count()
+        pontos_acao = db.session.query(func.coalesce(func.sum(ExtratoPonto.pontos), 0)).filter(ExtratoPonto.usuario_id == current_user.id, ExtratoPonto.categoria == "acao").scalar()
 
         return render_template(
             "dashboard.html",
@@ -306,6 +411,9 @@ def configurar_rotas(app):
             ultimas_operacoes=ultimas_operacoes,
             progresso=progresso,
             data_hoje=data_hoje,
+            total_acoes=total_acoes,
+            total_desmanches=total_desmanches,
+            pontos_acao=int(pontos_acao or 0),
         )
 
     @app.route("/salvar-operacao", methods=["POST"])
@@ -337,27 +445,137 @@ def configurar_rotas(app):
             return resposta_erro("O ID do jogador é inválido.")
 
         try:
-            valor = converter_decimal(dados.get("valor"), "valor")
-            porcentagem = converter_decimal(dados.get("porcentagem"), "porcentagem")
-            valor_porcentagem = converter_decimal(dados.get("valor_porcentagem"), "valor_porcentagem")
+            valor = converter_decimal(
+                dados.get("valor"),
+                "valor original",
+            )
+            valor_envio = converter_decimal(
+                dados.get("valor_envio"),
+                "valor enviado",
+            )
         except ValueError as erro:
             return resposta_erro(str(erro))
 
         if valor <= 0:
-            return resposta_erro("O valor da operação deve ser maior que zero.")
-        if porcentagem < Decimal("-40") or porcentagem > Decimal("-20"):
-            return resposta_erro("A porcentagem deve estar entre -40% e -20%.")
+            return resposta_erro(
+                "O valor original da operação deve ser maior que zero."
+            )
 
-        ganho_calculado = (valor * abs(porcentagem) / Decimal("100")).quantize(Decimal("0.01"))
-        valor_porcentagem = valor_porcentagem.quantize(Decimal("0.01"))
-        if abs(ganho_calculado - valor_porcentagem) > Decimal("0.02"):
-            return resposta_erro("O ganho informado não corresponde ao valor e à porcentagem da operação.")
+        if valor_envio <= 0:
+            return resposta_erro(
+                "O valor enviado deve ser maior que zero."
+            )
+
+        if valor_envio >= valor:
+            return resposta_erro(
+                "Os valores não conferem: o valor enviado precisa ser menor que o valor original."
+            )
+
+        ganho_calculado = (
+            valor -
+            valor_envio
+        ).quantize(
+            Decimal("0.01")
+        )
+
+        percentual_bruto = (
+            ganho_calculado /
+            valor *
+            Decimal("100")
+        )
+
+        percentual_inteiro = Decimal(
+            round(
+                float(
+                    percentual_bruto
+                )
+            )
+        )
+
+        distancia_inteiro = abs(
+            percentual_bruto -
+            percentual_inteiro
+        )
+
+        if (
+            distancia_inteiro <=
+            Decimal("0.35")
+        ):
+            percentual_positivo = (
+                percentual_inteiro
+            )
+        else:
+            percentual_positivo = (
+                percentual_bruto
+                .quantize(
+                    Decimal("0.01")
+                )
+            )
+
+        if (
+            percentual_positivo <
+            Decimal("20")
+            or
+            percentual_positivo >
+            Decimal("40")
+        ):
+            return resposta_erro(
+                "A porcentagem automática ficou fora de 20% a 40%. O OCR pode ter perdido algum zero."
+            )
+
+        # Recalcula o ganho pela taxa normalizada.
+        ganho_calculado = (
+            valor *
+            percentual_positivo /
+            Decimal("100")
+        ).quantize(
+            Decimal("0.01")
+        )
+
+        # Compatibilidade com o banco atual, que armazena taxa negativa.
+        porcentagem = (
+            -percentual_positivo
+        ).quantize(
+            Decimal("0.01")
+        )
+
+        data_exibicao = limpar_texto(
+            dados.get("data_exibicao"),
+            40,
+        )
+
+        if not data_exibicao:
+            return resposta_erro(
+                "A data e hora do print final não foram identificadas."
+            )
+
+        try:
+            data_local = datetime.strptime(
+                data_exibicao,
+                "%d/%m/%Y %H:%M",
+            ).replace(
+                tzinfo=ZoneInfo(
+                    "America/Sao_Paulo"
+                )
+            )
+
+            criado_em_operacao = (
+                data_local
+                .astimezone(
+                    timezone.utc
+                )
+            )
+        except ValueError:
+            return resposta_erro(
+                "A data e hora extraídas do print estão em formato inválido."
+            )
 
         nova_operacao = Operacao(
             usuario_id=current_user.id,
             nome_jogador=nome_jogador,
             id_jogador=id_jogador,
             valor=valor,
+            valor_envio=valor_envio,
             porcentagem=porcentagem,
             valor_porcentagem=ganho_calculado,
             observacoes=observacoes,
@@ -365,7 +583,7 @@ def configurar_rotas(app):
             print_envio_mime=print_envio_mime,
             print_recebimento_dados=print_recebimento_dados,
             print_recebimento_mime=print_recebimento_mime,
-            criado_em=datetime.now(timezone.utc),
+            criado_em=criado_em_operacao,
         )
         try:
             db.session.add(nova_operacao)
@@ -384,6 +602,168 @@ def configurar_rotas(app):
             "meta": progresso["meta"],
             "apto": progresso["apto"],
         }), 201
+
+
+    @app.route("/admin")
+    @login_required
+    @admin_required
+    def admin_dashboard():
+        usuarios = Usuario.query.order_by(
+            Usuario.usuario.asc()
+        ).all()
+
+        membros = []
+
+        for usuario in usuarios:
+            if getattr(usuario, "is_admin", False):
+                continue
+
+            perfil = PerfilSetor.query.filter_by(
+                usuario_id=usuario.id
+            ).first()
+
+            perfil_game = obter_perfil_game(usuario.id)
+
+            total_lavagens = Operacao.query.filter_by(
+                usuario_id=usuario.id
+            ).count()
+
+            total_acoes = Acao.query.filter_by(
+                usuario_id=usuario.id
+            ).count()
+
+            total_desmanches = Desmanche.query.filter_by(
+                usuario_id=usuario.id
+            ).count()
+
+            pontos_acao = db.session.query(
+                func.coalesce(
+                    func.sum(ExtratoPonto.pontos),
+                    0
+                )
+            ).filter(
+                ExtratoPonto.usuario_id == usuario.id,
+                ExtratoPonto.categoria == "acao",
+            ).scalar()
+
+            pontos_lavagem = db.session.query(
+                func.coalesce(
+                    func.sum(ExtratoPonto.pontos),
+                    0
+                )
+            ).filter(
+                ExtratoPonto.usuario_id == usuario.id,
+                ExtratoPonto.categoria == "lavagem",
+            ).scalar()
+
+            membros.append({
+                "usuario": usuario,
+                "perfil": perfil,
+                "perfil_game": perfil_game,
+                "lavagens": total_lavagens,
+                "acoes": total_acoes,
+                "desmanches": total_desmanches,
+                "pontos_acao": int(pontos_acao or 0),
+                "pontos_lavagem": int(pontos_lavagem or 0),
+            })
+
+        total_membros = len(membros)
+        total_acoes_geral = Acao.query.count()
+        total_desmanches_geral = Desmanche.query.count()
+        total_lavagens_geral = Operacao.query.count()
+
+        solicitacoes_pendentes = SolicitacaoPerfilGame.query.filter_by(
+            status="pendente"
+        ).order_by(
+            SolicitacaoPerfilGame.solicitado_em.asc()
+        ).all()
+        solicitacoes = [
+            {
+                "solicitacao": sol,
+                "usuario": db.session.get(Usuario, sol.usuario_id),
+            }
+            for sol in solicitacoes_pendentes
+        ]
+
+        return render_template(
+            "admin_dashboard.html",
+            membros=membros,
+            total_membros=total_membros,
+            total_acoes_geral=total_acoes_geral,
+            total_desmanches_geral=total_desmanches_geral,
+            total_lavagens_geral=total_lavagens_geral,
+            solicitacoes=solicitacoes,
+            total_solicitacoes=len(solicitacoes),
+        )
+
+
+    @app.route("/admin/membro/<int:usuario_id>")
+    @login_required
+    @admin_required
+    def admin_membro(usuario_id):
+        usuario = db.session.get(
+            Usuario,
+            usuario_id
+        )
+
+        if usuario is None:
+            flash("Membro não encontrado.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        perfil = PerfilSetor.query.filter_by(
+            usuario_id=usuario.id
+        ).first()
+        perfil_game = obter_perfil_game(usuario.id)
+
+        lavagens = Operacao.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            Operacao.criado_em.desc()
+        ).limit(25).all()
+
+        acoes = Acao.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            Acao.data_hora.desc()
+        ).limit(25).all()
+
+        desmanches = Desmanche.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            Desmanche.data_hora.desc()
+        ).limit(25).all()
+
+        extrato = ExtratoPonto.query.filter_by(
+            usuario_id=usuario.id
+        ).order_by(
+            ExtratoPonto.criado_em.desc()
+        ).limit(50).all()
+
+        pontos_acao = sum(
+            item.pontos
+            for item in extrato
+            if item.categoria == "acao"
+        )
+
+        pontos_lavagem = sum(
+            item.pontos
+            for item in extrato
+            if item.categoria == "lavagem"
+        )
+
+        return render_template(
+            "admin_membro.html",
+            membro=usuario,
+            perfil=perfil,
+            perfil_game=perfil_game,
+            lavagens=lavagens,
+            acoes=acoes,
+            desmanches=desmanches,
+            extrato=extrato,
+            pontos_acao=pontos_acao,
+            pontos_lavagem=pontos_lavagem,
+        )
+
 
     @app.route("/reset-semanal", methods=["POST"])
     @login_required
@@ -434,12 +814,95 @@ def configurar_rotas(app):
             return redirect(url_for("dashboard" if houve_promocao else "configuracoes"))
 
         progresso = resumo_meta_semanal(current_user)
+        perfil_game = obter_perfil_game(current_user.id)
+        solicitacao_perfil = obter_solicitacao_perfil_pendente(current_user.id)
+        historico_solicitacoes = SolicitacaoPerfilGame.query.filter_by(
+            usuario_id=current_user.id
+        ).order_by(
+            SolicitacaoPerfilGame.solicitado_em.desc()
+        ).limit(5).all()
+
         return render_template(
             "configuracoes.html",
             cargos=ORDEM_CARGOS,
             metas=CARGOS,
             progresso=progresso,
+            perfil_game=perfil_game,
+            solicitacao_perfil=solicitacao_perfil,
+            historico_solicitacoes=historico_solicitacoes,
         )
+
+    @app.route("/configuracoes/perfil-game", methods=["POST"])
+    @login_required
+    def salvar_perfil_game():
+        try:
+            nome_novo, id_novo = validar_dados_game(
+                request.form.get("nome_game"),
+                request.form.get("id_game"),
+            )
+        except ValueError as erro:
+            flash(str(erro), "erro")
+            return redirect(url_for("configuracoes"))
+
+        perfil_atual = obter_perfil_game(current_user.id)
+
+        # Primeira vinculação: é salva imediatamente.
+        if perfil_atual is None:
+            id_em_uso = PerfilGame.query.filter_by(id_game=id_novo).first()
+            if id_em_uso:
+                flash("Este ID do game já está vinculado a outra conta.", "erro")
+                return redirect(url_for("configuracoes"))
+
+            try:
+                db.session.add(PerfilGame(
+                    usuario_id=current_user.id,
+                    nome_game=nome_novo,
+                    id_game=id_novo,
+                ))
+                db.session.commit()
+                flash("Nome e ID do game vinculados à sua conta.", "sucesso")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Este ID do game já está vinculado a outra conta.", "erro")
+            except SQLAlchemyError:
+                db.session.rollback()
+                logger.exception("Erro ao criar perfil game do usuário %s", current_user.id)
+                flash("Não foi possível salvar seu perfil do game.", "erro")
+            return redirect(url_for("configuracoes"))
+
+        if perfil_atual.nome_game == nome_novo and perfil_atual.id_game == id_novo:
+            flash("Nenhuma alteração foi detectada.", "info")
+            return redirect(url_for("configuracoes"))
+
+        if obter_solicitacao_perfil_pendente(current_user.id):
+            flash("Você já possui uma alteração de Nome/ID aguardando aprovação do ADM.", "aviso")
+            return redirect(url_for("configuracoes"))
+
+        id_em_uso = PerfilGame.query.filter(
+            PerfilGame.id_game == id_novo,
+            PerfilGame.usuario_id != current_user.id,
+        ).first()
+        if id_em_uso:
+            flash("Este ID do game já está vinculado a outra conta.", "erro")
+            return redirect(url_for("configuracoes"))
+
+        try:
+            db.session.add(SolicitacaoPerfilGame(
+                usuario_id=current_user.id,
+                nome_atual=perfil_atual.nome_game,
+                id_atual=perfil_atual.id_game,
+                nome_novo=nome_novo,
+                id_novo=id_novo,
+                status="pendente",
+            ))
+            db.session.commit()
+            flash("Alteração enviada. Seu Nome/ID atual só muda após aprovação de um ADM.", "sucesso")
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Erro ao solicitar alteração de perfil game do usuário %s", current_user.id)
+            flash("Não foi possível enviar a solicitação.", "erro")
+
+        return redirect(url_for("configuracoes"))
 
     @app.route("/historico")
     @login_required
@@ -450,24 +913,46 @@ def configurar_rotas(app):
     @app.route("/relatorios")
     @login_required
     def relatorios():
-        filtro_usuario = Operacao.usuario_id == current_user.id
         resumo = db.session.query(
             func.count(Operacao.id),
             func.coalesce(func.sum(Operacao.valor), 0),
             func.coalesce(func.sum(Operacao.valor_porcentagem), 0),
-        ).filter(filtro_usuario).one()
-        jogadores = db.session.query(
-            Operacao.nome_jogador,
+        ).one()
+
+        membros = db.session.query(
+            Usuario.id.label("usuario_id"),
+            Usuario.usuario.label("usuario_site"),
+            Usuario.cargo.label("cargo"),
+            PerfilGame.nome_game.label("nome_game"),
+            PerfilGame.id_game.label("id_game"),
             func.count(Operacao.id).label("total_operacoes"),
             func.coalesce(func.sum(Operacao.valor), 0).label("valor_total"),
             func.coalesce(func.sum(Operacao.valor_porcentagem), 0).label("ganhos_total"),
-        ).filter(filtro_usuario).group_by(Operacao.nome_jogador).order_by(func.sum(Operacao.valor).desc()).all()
+        ).join(
+            Operacao,
+            Operacao.usuario_id == Usuario.id,
+        ).outerjoin(
+            PerfilGame,
+            PerfilGame.usuario_id == Usuario.id,
+        ).filter(
+            Usuario.is_admin.is_(False),
+        ).group_by(
+            Usuario.id,
+            Usuario.usuario,
+            Usuario.cargo,
+            PerfilGame.nome_game,
+            PerfilGame.id_game,
+        ).order_by(
+            func.count(Operacao.id).desc(),
+            func.sum(Operacao.valor).desc(),
+        ).all()
+
         return render_template(
             "relatorios.html",
             total_operacoes=resumo[0],
             valor_total=resumo[1],
             ganhos_total=resumo[2],
-            jogadores=jogadores,
+            membros=membros,
         )
 
     @app.route("/excluir-operacao/<int:id>", methods=["POST"])
@@ -521,3 +1006,818 @@ def configurar_rotas(app):
         return redirect(url_for("login"))
 
     logger.info("Rotas registradas com sucesso.")
+
+# =========================================================
+# GESTÃO COMPLETA — AÇÕES, DESMANCHES, RANKING E HISTÓRICO
+# =========================================================
+
+PONTOS_ACAO = {
+    "Drop": {"Vitória": 3, "Derrota": 1},
+    "Lojinha": {"Vitória": 6, "Derrota": 3},
+    "Joalheria": {"Vitória": 8, "Derrota": 3},
+    "Banco": {"Vitória": 15, "Derrota": 7},
+    "Invasão": {"Vitória": 12, "Derrota": 5},
+}
+
+CARGOS_ACAO = [
+    "Lanterninha",
+    "Olheiro",
+    "Cobrador",
+    "Soldado",
+    "Capanga",
+    "Tenente de Rua",
+]
+
+CARGOS_PERFIL = CARGOS_ACAO + CARGOS_GERENCIA
+
+HIERARQUIA_ACAO = {cargo: indice for indice, cargo in enumerate(CARGOS_PERFIL)}
+
+METAS_ACAO = {
+    "Lanterninha": {
+        0: {"pontos": None, "papeis": 125, "spray": 125, "dinheiro": 1500000},
+        1: {"pontos": None, "papeis": 100, "spray": 100, "dinheiro": 1200000},
+        2: {"pontos": None, "papeis": 62, "spray": 62, "dinheiro": 750000},
+    },
+    "Olheiro": {
+        0: {"pontos": 90, "papeis": 50, "spray": 50, "dinheiro": 4000000},
+        1: {"pontos": 72, "papeis": 40, "spray": 40, "dinheiro": 3200000},
+        2: {"pontos": 45, "papeis": 25, "spray": 25, "dinheiro": 2000000},
+    },
+    "Cobrador": {
+        0: {"pontos": 80, "papeis": 40, "spray": 40, "dinheiro": 3500000},
+        1: {"pontos": 64, "papeis": 32, "spray": 32, "dinheiro": 2800000},
+        2: {"pontos": 40, "papeis": 20, "spray": 20, "dinheiro": 1750000},
+    },
+    "Soldado": {
+        0: {"pontos": 70, "papeis": 30, "spray": 30, "dinheiro": 3000000},
+        1: {"pontos": 56, "papeis": 24, "spray": 24, "dinheiro": 2400000},
+        2: {"pontos": 35, "papeis": 20, "spray": 20, "dinheiro": 1500000},
+    },
+    "Capanga": {
+        0: {"pontos": 60, "papeis": 20, "spray": 20, "dinheiro": 2500000},
+        1: {"pontos": 48, "papeis": 16, "spray": 16, "dinheiro": 2000000},
+        2: {"pontos": 30, "papeis": 10, "spray": 10, "dinheiro": 1250000},
+    },
+    "Tenente de Rua": {
+        0: {"pontos": 50, "papeis": 10, "spray": 10, "dinheiro": 2000000},
+        1: {"pontos": 40, "papeis": 8, "spray": 8, "dinheiro": 1600000},
+        2: {"pontos": 25, "papeis": 5, "spray": 5, "dinheiro": 1000000},
+    },
+    "Chefe de Setor": {
+        0: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 2000000},
+        1: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 1600000},
+        2: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 1000000},
+    },
+    "Alto Conselho": {
+        0: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 2000000},
+        1: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 1600000},
+        2: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 1000000},
+    },
+    "Sub Gerente": {
+        0: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 2500000},
+        1: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 2000000},
+        2: {"pontos": None, "papeis": None, "spray": None, "dinheiro": 1250000},
+    },
+}
+
+
+def limpar(valor, limite=2000):
+    return str(valor or "").strip()[:limite]
+
+
+def decimal_positivo(valor, campo):
+    try:
+        numero = Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError(f"{campo} inválido.")
+    if not numero.is_finite() or numero <= 0:
+        raise ValueError(f"{campo} precisa ser maior que zero.")
+    return numero.quantize(Decimal("0.01"))
+
+
+def parse_data_hora(valor):
+    texto = limpar(valor, 40)
+    formatos = ("%Y-%m-%dT%H:%M", "%d/%m/%Y %H:%M", "%d/%m/%Y - %H:%M")
+    for formato in formatos:
+        try:
+            local = datetime.strptime(texto, formato).replace(tzinfo=FUSO_GESTAO)
+            return local.astimezone(timezone.utc)
+        except ValueError:
+            continue
+    raise ValueError("Data e hora inválidas.")
+
+
+def validar_hash(valor):
+    texto = limpar(valor, 80).lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", texto):
+        raise ValueError("A prova final precisa ser um print válido.")
+    return texto
+
+
+def fingerprint(*partes):
+    base = "|".join(limpar(p, 500).lower() for p in partes)
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def obter_perfil(usuario_id, criar=True):
+    perfil = PerfilSetor.query.filter_by(usuario_id=usuario_id).first()
+    if perfil is None and criar:
+        perfil = PerfilSetor(
+            usuario_id=usuario_id,
+            setor_lavagem=True,
+            setor_acao=False,
+            impulsos_lavagem=0,
+            impulsos_acao=0,
+        )
+        db.session.add(perfil)
+        db.session.commit()
+    return perfil
+
+
+def inicio_semana():
+    agora = datetime.now(FUSO_GESTAO)
+    dias = (agora.weekday() + 1) % 7
+    inicio = (agora - timedelta(days=dias)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return inicio.astimezone(timezone.utc)
+
+
+def sugerir_responsavel(participantes):
+    melhor = None
+    melhor_nivel = -1
+    for linha in participantes.splitlines():
+        if "|" not in linha:
+            continue
+        nome, cargo = [x.strip() for x in linha.split("|", 1)]
+        nivel = HIERARQUIA_ACAO.get(cargo, -1)
+        if nome and nivel > melhor_nivel:
+            melhor = f"{nome} | {cargo}"
+            melhor_nivel = nivel
+    return melhor or ""
+
+
+def configurar_rotas_gestao(app):
+
+    @app.route("/gestao")
+    @login_required
+    def gestao():
+        perfil = obter_perfil(current_user.id)
+        perfil_game = obter_perfil_game(current_user.id)
+        solicitacao_perfil = obter_solicitacao_perfil_pendente(current_user.id)
+        inicio = inicio_semana()
+
+        pontos_acao = db.session.query(
+            func.coalesce(func.sum(ExtratoPonto.pontos), 0)
+        ).filter(
+            ExtratoPonto.usuario_id == current_user.id,
+            ExtratoPonto.categoria == "acao",
+            ExtratoPonto.criado_em >= inicio,
+        ).scalar()
+
+        pontos_lavagem = db.session.query(
+            func.coalesce(func.sum(ExtratoPonto.pontos), 0)
+        ).filter(
+            ExtratoPonto.usuario_id == current_user.id,
+            ExtratoPonto.categoria == "lavagem",
+            ExtratoPonto.criado_em >= inicio,
+        ).scalar()
+
+        lavagens_semana, valor_semana = db.session.query(
+            func.count(Operacao.id),
+            func.coalesce(func.sum(Operacao.valor), 0),
+        ).filter(
+            Operacao.usuario_id == current_user.id,
+            Operacao.criado_em >= inicio,
+        ).one()
+
+        acoes_semana = Acao.query.filter(
+            Acao.usuario_id == current_user.id,
+            Acao.data_hora >= inicio,
+        ).count()
+
+        desmanches_semana = Desmanche.query.filter(
+            Desmanche.usuario_id == current_user.id,
+            Desmanche.data_hora >= inicio,
+        ).count()
+
+        meta_acao = None
+        if perfil.cargo_acao in METAS_ACAO:
+            meta_acao = METAS_ACAO[perfil.cargo_acao][
+                perfil.impulsos_acao if perfil.impulsos_acao in (0, 1, 2) else 0
+            ]
+
+        meta_lavagem = resumo_meta_semanal(current_user)
+
+        # Posição semanal em cada ranking.
+        lavagem_rank = db.session.query(
+            Operacao.usuario_id,
+            func.count(Operacao.id).label("total"),
+        ).filter(
+            Operacao.criado_em >= inicio,
+        ).group_by(Operacao.usuario_id).order_by(func.count(Operacao.id).desc()).all()
+
+        acao_rank = db.session.query(
+            ExtratoPonto.usuario_id,
+            func.sum(ExtratoPonto.pontos).label("total"),
+        ).filter(
+            ExtratoPonto.categoria == "acao",
+            ExtratoPonto.criado_em >= inicio,
+        ).group_by(ExtratoPonto.usuario_id).order_by(func.sum(ExtratoPonto.pontos).desc()).all()
+
+        desmanche_rank = db.session.query(
+            Desmanche.usuario_id,
+            func.count(Desmanche.id).label("total"),
+        ).filter(
+            Desmanche.data_hora >= inicio,
+        ).group_by(Desmanche.usuario_id).order_by(func.count(Desmanche.id).desc()).all()
+
+        def posicao(lista):
+            for indice, linha in enumerate(lista, 1):
+                if linha[0] == current_user.id:
+                    return indice
+            return None
+
+        posicoes = {
+            "lavagem": posicao(lavagem_rank),
+            "acao": posicao(acao_rank),
+            "desmanche": posicao(desmanche_rank),
+        }
+
+        atividades = []
+        for op in Operacao.query.filter_by(usuario_id=current_user.id).order_by(Operacao.criado_em.desc()).limit(4).all():
+            atividades.append({"data": op.criado_em, "icone": "💰", "tipo": "Lavagem", "titulo": f"{op.nome_jogador} #{op.id_jogador}"})
+        for acao in Acao.query.filter_by(usuario_id=current_user.id).order_by(Acao.data_hora.desc()).limit(4).all():
+            atividades.append({"data": acao.data_hora, "icone": "🔫", "tipo": "Ação", "titulo": f"{acao.tipo} — {acao.resultado}"})
+        for des in Desmanche.query.filter_by(usuario_id=current_user.id).order_by(Desmanche.data_hora.desc()).limit(4).all():
+            atividades.append({"data": des.data_hora, "icone": "🚗", "tipo": "Desmanche", "titulo": des.modelo})
+
+        def timestamp_seguro(item):
+            data = item["data"]
+            if data is None:
+                return 0
+            if data.tzinfo is None:
+                data = data.replace(tzinfo=timezone.utc)
+            return data.timestamp()
+
+        atividades = sorted(atividades, key=timestamp_seguro, reverse=True)[:8]
+
+        return render_template(
+            "gestao.html",
+            perfil=perfil,
+            perfil_game=perfil_game,
+            solicitacao_perfil=solicitacao_perfil,
+            pontos_acao=int(pontos_acao or 0),
+            pontos_lavagem=int(pontos_lavagem or 0),
+            lavagens_semana=int(lavagens_semana or 0),
+            valor_semana=valor_semana or 0,
+            acoes_semana=acoes_semana,
+            desmanches_semana=desmanches_semana,
+            meta_acao=meta_acao,
+            meta_lavagem=meta_lavagem,
+            posicoes=posicoes,
+            atividades=atividades,
+        )
+
+    @app.route("/perfil-setores", methods=["GET", "POST"])
+    @login_required
+    def perfil_setores():
+        perfil = obter_perfil(current_user.id)
+
+        if request.method == "POST":
+            perfil.setor_lavagem = request.form.get("setor_lavagem") == "on"
+            perfil.setor_acao = request.form.get("setor_acao") == "on"
+
+            cargo = limpar(request.form.get("cargo_acao"), 60)
+            perfil.cargo_acao = cargo if cargo in CARGOS_PERFIL else None
+
+            try:
+                perfil.impulsos_acao = max(0, min(2, int(request.form.get("impulsos_acao", 0))))
+                perfil.impulsos_lavagem = max(0, min(2, int(request.form.get("impulsos_lavagem", 0))))
+            except ValueError:
+                perfil.impulsos_acao = 0
+                perfil.impulsos_lavagem = 0
+
+            if not perfil.setor_acao and not perfil.setor_lavagem:
+                perfil.setor_lavagem = True
+
+            db.session.commit()
+            return redirect(url_for("gestao"))
+
+        return render_template(
+            "perfil_setores.html",
+            perfil=perfil,
+            cargos_acao=CARGOS_ACAO,
+            cargos_gerencia=CARGOS_GERENCIA,
+        )
+
+    @app.route("/acoes")
+    @login_required
+    def acoes():
+        perfil = obter_perfil(current_user.id)
+        ultimas = Acao.query.filter_by(usuario_id=current_user.id).order_by(
+            Acao.data_hora.desc(), Acao.id.desc()
+        ).limit(20).all()
+        return render_template(
+            "acoes.html",
+            tipos=list(PONTOS_ACAO.keys()),
+            cargos=CARGOS_ACAO,
+            perfil=perfil,
+            ultimas=ultimas,
+        )
+
+    @app.route("/acoes/salvar", methods=["POST"])
+    @login_required
+    def salvar_acao():
+        """API de ações: sempre devolve JSON, inclusive em falhas inesperadas."""
+        try:
+            if not request.is_json:
+                return jsonify(
+                    sucesso=False,
+                    erro="A requisição da ação precisa ser enviada em JSON.",
+                    codigo="ACAO_JSON_INVALIDO",
+                ), 415
+
+            dados = request.get_json(silent=True)
+            if not isinstance(dados, dict):
+                return jsonify(
+                    sucesso=False,
+                    erro="Não foi possível ler os dados enviados.",
+                    codigo="ACAO_DADOS_INVALIDOS",
+                ), 400
+
+            tipo = limpar(dados.get("tipo"), 30)
+            resultado = limpar(dados.get("resultado"), 10)
+            participantes = limpar(dados.get("participantes"), 5000)
+            responsavel = limpar(dados.get("responsavel"), 120)
+            resumo = limpar(dados.get("resumo"), 4000)
+            lucro = limpar(dados.get("lucro"), 2000) or "Nada"
+            prova_nome = limpar(dados.get("prova_nome"), 255)
+
+            if tipo not in PONTOS_ACAO:
+                return jsonify(
+                    sucesso=False,
+                    erro="Tipo de ação inválido.",
+                    codigo="ACAO_TIPO_INVALIDO",
+                ), 400
+
+            if resultado not in {"Vitória", "Derrota"}:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe Vitória ou Derrota.",
+                    codigo="ACAO_RESULTADO_INVALIDO",
+                ), 400
+
+            if not participantes:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe os participantes e cargos.",
+                    codigo="ACAO_PARTICIPANTES_OBRIGATORIOS",
+                ), 400
+
+            if not resumo:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe um resumo da ação.",
+                    codigo="ACAO_RESUMO_OBRIGATORIO",
+                ), 400
+
+            try:
+                data_hora = parse_data_hora(dados.get("data_hora"))
+                prova_hash = validar_hash(dados.get("prova_hash"))
+            except ValueError as erro:
+                return jsonify(
+                    sucesso=False,
+                    erro=str(erro),
+                    codigo="ACAO_VALIDACAO",
+                ), 400
+
+            if not responsavel:
+                responsavel = sugerir_responsavel(participantes)
+
+            if not responsavel:
+                return jsonify(
+                    sucesso=False,
+                    erro="Informe o responsável oficial da ação.",
+                    codigo="ACAO_RESPONSAVEL_OBRIGATORIO",
+                ), 400
+
+            pontos = PONTOS_ACAO[tipo][resultado]
+
+            assinatura = fingerprint(
+                current_user.id,
+                tipo,
+                data_hora.isoformat(),
+                participantes,
+                resultado,
+                prova_hash,
+            )
+
+            existente = Acao.query.filter_by(
+                usuario_id=current_user.id,
+                fingerprint=assinatura,
+            ).first()
+
+            if existente:
+                return jsonify(
+                    sucesso=False,
+                    duplicado=True,
+                    erro="Esta ação já foi registrada.",
+                    codigo="ACAO_DUPLICADA",
+                ), 409
+
+            acao = Acao(
+                usuario_id=current_user.id,
+                tipo=tipo,
+                data_hora=data_hora,
+                participantes=participantes,
+                responsavel=responsavel,
+                resumo=resumo,
+                resultado=resultado,
+                lucro=lucro,
+                pontos=pontos,
+                prova_hash=prova_hash,
+                prova_nome=prova_nome or "print-final",
+                fingerprint=assinatura,
+            )
+
+            db.session.add(acao)
+            db.session.flush()
+            db.session.add(ExtratoPonto(
+                usuario_id=current_user.id,
+                origem_tipo="acao",
+                origem_id=acao.id,
+                categoria="acao",
+                pontos=pontos,
+                descricao=f"{tipo} — {resultado}",
+                criado_em=data_hora,
+            ))
+            db.session.commit()
+
+            return jsonify(
+                sucesso=True,
+                pontos=pontos,
+                id=acao.id,
+            ), 201
+
+        except IntegrityError:
+            db.session.rollback()
+            return jsonify(
+                sucesso=False,
+                duplicado=True,
+                erro="Esta ação parece já ter sido registrada.",
+                codigo="ACAO_DUPLICADA",
+            ), 409
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Erro de banco ao salvar ação")
+            return jsonify(
+                sucesso=False,
+                erro="O banco de dados recusou o registro da ação.",
+                codigo="ACAO_BANCO",
+            ), 500
+
+        except Exception:
+            db.session.rollback()
+            logger.exception("Erro inesperado ao salvar ação")
+            return jsonify(
+                sucesso=False,
+                erro="O servidor encontrou um erro ao salvar a ação.",
+                codigo="ACAO_SERVIDOR",
+            ), 500
+
+    @app.route("/desmanches")
+    @login_required
+    def desmanches():
+        perfil = obter_perfil(current_user.id)
+        ultimos = Desmanche.query.filter_by(usuario_id=current_user.id).order_by(
+            Desmanche.data_hora.desc(), Desmanche.id.desc()
+        ).limit(20).all()
+        return render_template(
+            "desmanches.html",
+            perfil=perfil,
+            ultimos=ultimos,
+        )
+
+    @app.route("/desmanches/salvar", methods=["POST"])
+    @login_required
+    def salvar_desmanche():
+        """
+        API de desmanche.
+        IMPORTANTE: esta rota sempre responde JSON, inclusive em erros inesperados,
+        para o front-end nunca receber HTML e quebrar no response.json().
+        """
+        try:
+            if not request.is_json:
+                return jsonify(
+                    sucesso=False,
+                    erro="A requisição do desmanche precisa ser enviada em JSON.",
+                    codigo="DESMANCHE_JSON_INVALIDO",
+                ), 415
+
+            dados = request.get_json(silent=True)
+            if not isinstance(dados, dict):
+                return jsonify(
+                    sucesso=False,
+                    erro="Não foi possível ler os dados enviados.",
+                    codigo="DESMANCHE_DADOS_INVALIDOS",
+                ), 400
+
+            modelo = limpar(dados.get("modelo"), 100)
+            destino = limpar(dados.get("destino_pontos"), 20)
+            prova_nome = limpar(dados.get("prova_nome"), 255)
+
+            if not modelo:
+                return jsonify(
+                    sucesso=False,
+                    erro="O modelo do veículo é obrigatório.",
+                    codigo="DESMANCHE_MODELO_OBRIGATORIO",
+                ), 400
+
+            if destino not in {"acao", "lavagem"}:
+                return jsonify(
+                    sucesso=False,
+                    erro="Escolha Ação ou Lavagem para receber os pontos.",
+                    codigo="DESMANCHE_DESTINO_INVALIDO",
+                ), 400
+
+            try:
+                data_hora = parse_data_hora(dados.get("data_hora"))
+                quantidade = decimal_positivo(
+                    dados.get("quantidade"),
+                    "Quantidade recebida",
+                )
+                prova_hash = validar_hash(dados.get("prova_hash"))
+            except ValueError as erro:
+                return jsonify(
+                    sucesso=False,
+                    erro=str(erro),
+                    codigo="DESMANCHE_VALIDACAO",
+                ), 400
+
+            pontos = 2 if destino == "acao" else 1
+
+            assinatura = fingerprint(
+                current_user.id,
+                modelo,
+                data_hora.isoformat(),
+                quantidade,
+                destino,
+                prova_hash,
+            )
+
+            # Verificação antecipada deixa a mensagem de duplicidade mais clara
+            existente = Desmanche.query.filter_by(
+                usuario_id=current_user.id,
+                fingerprint=assinatura,
+            ).first()
+
+            if existente:
+                return jsonify(
+                    sucesso=False,
+                    duplicado=True,
+                    erro="Este desmanche já foi registrado.",
+                    codigo="DESMANCHE_DUPLICADO",
+                ), 409
+
+            registro = Desmanche(
+                usuario_id=current_user.id,
+                modelo=modelo,
+                data_hora=data_hora,
+                quantidade=quantidade,
+                destino_pontos=destino,
+                pontos=pontos,
+                prova_hash=prova_hash,
+                prova_nome=prova_nome or "print-desmanche",
+                fingerprint=assinatura,
+            )
+
+            db.session.add(registro)
+            db.session.flush()
+
+            extrato = ExtratoPonto(
+                usuario_id=current_user.id,
+                origem_tipo="desmanche",
+                origem_id=registro.id,
+                categoria=destino,
+                pontos=pontos,
+                descricao=f"Desmanche {modelo}",
+                criado_em=data_hora,
+            )
+
+            db.session.add(extrato)
+            db.session.commit()
+
+            return jsonify(
+                sucesso=True,
+                pontos=pontos,
+                id=registro.id,
+            ), 201
+
+        except IntegrityError:
+            db.session.rollback()
+            return jsonify(
+                sucesso=False,
+                duplicado=True,
+                erro="Este desmanche parece já ter sido registrado.",
+                codigo="DESMANCHE_DUPLICADO",
+            ), 409
+
+        except SQLAlchemyError as erro:
+            db.session.rollback()
+            logger.exception("Erro de banco ao salvar desmanche")
+            return jsonify(
+                sucesso=False,
+                erro="O banco de dados recusou o registro. Tente novamente.",
+                codigo="DESMANCHE_BANCO",
+            ), 500
+
+        except Exception as erro:
+            db.session.rollback()
+            logger.exception("Erro inesperado ao salvar desmanche")
+            return jsonify(
+                sucesso=False,
+                erro="O servidor encontrou um erro ao salvar o desmanche.",
+                codigo="DESMANCHE_SERVIDOR",
+            ), 500
+
+
+    @app.route("/ranking")
+    @login_required
+    def ranking():
+        categoria = request.args.get("categoria", "lavagem")
+        if categoria not in {"lavagem", "acao", "desmanche"}:
+            categoria = "lavagem"
+
+        periodo = request.args.get("periodo", "semana")
+        if periodo not in {"semana", "mes", "geral"}:
+            periodo = "semana"
+
+        inicio_periodo = None
+        if periodo == "semana":
+            inicio_periodo = inicio_semana()
+        elif periodo == "mes":
+            agora = datetime.now(FUSO_GESTAO)
+            inicio_periodo = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+
+        def base_usuario_total(modelo, coluna_data, expressao_total, filtros=()):
+            consulta = db.session.query(
+                Usuario.id.label("usuario_id"),
+                Usuario.usuario.label("usuario_site"),
+                Usuario.cargo.label("cargo"),
+                PerfilGame.nome_game.label("nome_game"),
+                PerfilGame.id_game.label("id_game"),
+                expressao_total.label("total"),
+            ).join(
+                modelo,
+                modelo.usuario_id == Usuario.id,
+            ).outerjoin(
+                PerfilGame,
+                PerfilGame.usuario_id == Usuario.id,
+            ).filter(
+                Usuario.is_admin.is_(False),
+                *filtros,
+            )
+            if inicio_periodo is not None:
+                consulta = consulta.filter(coluna_data >= inicio_periodo)
+            return consulta.group_by(
+                Usuario.id, Usuario.usuario, Usuario.cargo,
+                PerfilGame.nome_game, PerfilGame.id_game,
+            ).order_by(expressao_total.desc(), Usuario.usuario.asc()).limit(100).all()
+
+        rankings = {
+            "lavagem": base_usuario_total(Operacao, Operacao.criado_em, func.count(Operacao.id)),
+            "acao": base_usuario_total(
+                ExtratoPonto,
+                ExtratoPonto.criado_em,
+                func.sum(ExtratoPonto.pontos),
+                (ExtratoPonto.categoria == "acao",),
+            ),
+            "desmanche": base_usuario_total(Desmanche, Desmanche.data_hora, func.count(Desmanche.id)),
+        }
+
+        ranking_rows = rankings[categoria]
+        return render_template(
+            "ranking.html",
+            ranking=ranking_rows,
+            categoria=categoria,
+            periodo=periodo,
+            top_lavagem=rankings["lavagem"][0] if rankings["lavagem"] else None,
+            top_acao=rankings["acao"][0] if rankings["acao"] else None,
+            top_desmanche=rankings["desmanche"][0] if rankings["desmanche"] else None,
+        )
+
+    @app.route("/admin/solicitacao-perfil/<int:solicitacao_id>/<acao>", methods=["POST"])
+    @login_required
+    @admin_required
+    def decidir_solicitacao_perfil(solicitacao_id, acao):
+        solicitacao = db.session.get(SolicitacaoPerfilGame, solicitacao_id)
+        if solicitacao is None:
+            flash("Solicitação não encontrada.", "erro")
+            return redirect(url_for("admin_dashboard"))
+        if solicitacao.status != "pendente":
+            flash("Esta solicitação já foi analisada.", "info")
+            return redirect(url_for("admin_dashboard"))
+
+        if acao not in {"aprovar", "recusar"}:
+            flash("Ação administrativa inválida.", "erro")
+            return redirect(url_for("admin_dashboard"))
+
+        try:
+            if acao == "aprovar":
+                conflito = PerfilGame.query.filter(
+                    PerfilGame.id_game == solicitacao.id_novo,
+                    PerfilGame.usuario_id != solicitacao.usuario_id,
+                ).first()
+                if conflito:
+                    flash("Não foi possível aprovar: o novo ID já pertence a outro membro.", "erro")
+                    return redirect(url_for("admin_dashboard"))
+
+                perfil_game = obter_perfil_game(solicitacao.usuario_id)
+                if perfil_game is None:
+                    perfil_game = PerfilGame(usuario_id=solicitacao.usuario_id)
+                    db.session.add(perfil_game)
+                perfil_game.nome_game = solicitacao.nome_novo
+                perfil_game.id_game = solicitacao.id_novo
+                solicitacao.status = "aprovada"
+                solicitacao.motivo_recusa = None
+            else:
+                solicitacao.status = "recusada"
+                solicitacao.motivo_recusa = limpar_texto(request.form.get("motivo"), 500) or "Alteração recusada pela administração."
+
+            solicitacao.admin_id = current_user.id
+            solicitacao.decidido_em = datetime.now(timezone.utc)
+            db.session.commit()
+            flash("Solicitação aprovada." if acao == "aprovar" else "Solicitação recusada.", "sucesso")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Não foi possível aprovar: o ID do game já está em uso.", "erro")
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Erro ao decidir solicitação de perfil %s", solicitacao_id)
+            flash("Não foi possível concluir a decisão.", "erro")
+
+        return redirect(url_for("admin_dashboard"))
+
+    @app.route("/historico-geral")
+    @login_required
+    def historico_geral():
+        tipo = request.args.get("tipo", "todos")
+        q = limpar(request.args.get("q"), 100).lower()
+
+        itens = []
+
+        if tipo in {"todos", "lavagem"}:
+            consulta = Operacao.query.filter_by(usuario_id=current_user.id).order_by(
+                Operacao.criado_em.desc()
+            ).limit(80)
+            for op in consulta:
+                if q and q not in f"{op.nome_jogador} {op.id_jogador}".lower():
+                    continue
+                itens.append({
+                    "tipo": "Lavagem",
+                    "icone": "💰",
+                    "titulo": f"{op.nome_jogador} #{op.id_jogador}",
+                    "detalhe": f"R$ {float(op.valor):,.2f} • {abs(float(op.porcentagem)):.0f}%",
+                    "data": op.criado_em,
+                })
+
+        if tipo in {"todos", "acao"}:
+            consulta = Acao.query.filter_by(usuario_id=current_user.id).order_by(
+                Acao.data_hora.desc()
+            ).limit(80)
+            for item in consulta:
+                if q and q not in f"{item.tipo} {item.resultado} {item.responsavel}".lower():
+                    continue
+                itens.append({
+                    "tipo": "Ação",
+                    "icone": "🔫",
+                    "titulo": f"{item.tipo} — {item.resultado}",
+                    "detalhe": f"+{item.pontos} pts • {item.responsavel}",
+                    "data": item.data_hora,
+                })
+
+        if tipo in {"todos", "desmanche"}:
+            consulta = Desmanche.query.filter_by(usuario_id=current_user.id).order_by(
+                Desmanche.data_hora.desc()
+            ).limit(80)
+            for item in consulta:
+                if q and q not in item.modelo.lower():
+                    continue
+                itens.append({
+                    "tipo": "Desmanche",
+                    "icone": "🚗",
+                    "titulo": item.modelo,
+                    "detalhe": f"R$ {float(item.quantidade):,.2f} • +{item.pontos} {item.destino_pontos}",
+                    "data": item.data_hora,
+                })
+
+        itens.sort(key=lambda item: item["data"], reverse=True)
+        itens = itens[:100]
+
+        return render_template(
+            "historico_geral.html",
+            itens=itens,
+            tipo=tipo,
+            q=q,
+        )
+

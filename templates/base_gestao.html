@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08080c">
+  <title>{% block title %}China PRO{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gestao.css') }}?v=20260818b">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=20260818b">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-standard.css') }}?v=20260818b">
+</head>
+<body class="china-app">
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="{{ url_for('gestao') }}">
+      <div>
+        <b>CHINA PRO</b>
+        <small>SISTEMA DE GESTÃO</small>
+      </div>
+    </a>
+
+    <nav>
+      <a class="{% if request.endpoint=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">⌂ <span>Dashboard</span></a>
+      <a class="{% if request.endpoint=='historico' %}active{% endif %}" href="{{ url_for('historico') }}">💰 <span>Lavagens</span></a>
+      <a class="{% if request.endpoint=='acoes' %}active{% endif %}" href="{{ url_for('acoes') }}">🔫 <span>Ações</span></a>
+      <a class="{% if request.endpoint=='desmanches' %}active{% endif %}" href="{{ url_for('desmanches') }}">🚗 <span>Desmanches</span></a>
+      <a class="{% if request.endpoint=='ranking' %}active{% endif %}" href="{{ url_for('ranking') }}">🏆 <span>Ranking</span></a>
+      <a class="{% if request.endpoint=='perfil_setores' %}active{% endif %}" href="{{ url_for('perfil_setores') }}">♛ <span>Metas e Cargos</span></a>
+      <a class="{% if request.endpoint=='historico_geral' %}active{% endif %}" href="{{ url_for('historico_geral') }}">▣ <span>Histórico Geral</span></a>
+      <a class="{% if request.endpoint=='gestao' %}active{% endif %}" href="{{ url_for('gestao') }}">◫ <span>Visão Geral</span></a>
+      <a class="{% if request.endpoint=='configuracoes' %}active{% endif %}" href="{{ url_for('configuracoes') }}">⚙ <span>Configurações</span></a>
+      {% if current_user.is_admin %}
+      <a class="{% if request.endpoint in ['admin_dashboard','admin_membro'] %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">🛡 <span>Administração</span></a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}">↪ <span>Sair</span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="app-topbar">
+      <div>
+        <span class="china-kicker">CHINA PRO</span>
+        <h1>{% block page_heading %}Sistema de Gestão{% endblock %}</h1>
+      </div>
+      <div class="app-profile">
+        <img class="china-profile-img" src="{{ url_for('static', filename='img/china-logo-user-web.jpg') }}" alt="China">
+        <div>
+          <b>{{ current_user.usuario }}</b>
+          <small>{{ current_user.cargo }}</small>
+        </div>
+      </div>
+    </header>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

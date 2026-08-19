@@ -1,0 +1,38 @@
+{% extends "base_gestao.html" %}
+{% block title %}Metas e Cargos — China PRO{% endblock %}
+{% block page_heading %}Metas e Cargos{% endblock %}
+{% block content %}
+<section class="page-intro"><div><span class="kicker">PERFIL</span><h2>Setores e cargos</h2><p class="muted">Lavagem, Ação e Gerência ficam organizados separadamente.</p></div></section>
+
+<form method="post" class="content-grid content-grid-2">
+  <section class="card form-card">
+    <div class="section-title"><h2>Participação</h2></div>
+    <label class="check-row"><input type="checkbox" name="setor_lavagem" {% if perfil.setor_lavagem %}checked{% endif %}><span>💰 Participa do setor de Lavagem</span></label>
+    <label class="check-row"><input type="checkbox" name="setor_acao" {% if perfil.setor_acao %}checked{% endif %}><span>🔫 Participa do setor de Ação / Gerência</span></label>
+
+    <label>Cargo de Ação ou Gerência</label>
+    <select name="cargo_acao">
+      <option value="">Selecione...</option>
+      <optgroup label="🔫 Ação">{% for cargo in cargos_acao %}<option value="{{ cargo }}" {% if perfil.cargo_acao == cargo %}selected{% endif %}>{{ cargo }}</option>{% endfor %}</optgroup>
+      <optgroup label="👑 Gerência">{% for cargo in cargos_gerencia %}<option value="{{ cargo }}" {% if perfil.cargo_acao == cargo %}selected{% endif %}>{{ cargo }}</option>{% endfor %}</optgroup>
+    </select>
+
+    <div class="form-grid">
+      <div><label>Impulsos de Ação</label><select name="impulsos_acao">{% for n in [0,1,2] %}<option value="{{ n }}" {% if perfil.impulsos_acao == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+      <div><label>Impulsos de Lavagem</label><select name="impulsos_lavagem">{% for n in [0,1,2] %}<option value="{{ n }}" {% if perfil.impulsos_lavagem == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+    </div>
+
+    <div class="actions"><button type="submit">Salvar perfil</button><a class="btn secondary" href="{{ url_for('gestao') }}">Voltar</a></div>
+  </section>
+
+  <aside class="card info-card">
+    <span class="kicker">ORGANIZAÇÃO</span>
+    <h2>Divisão dos cargos</h2>
+    <div class="role-summary">
+      <div><b>💰 Lavagem</b><p>Funcionário, Vendedor, Financista, Contador e Doleiro.</p></div>
+      <div><b>🔫 Ação</b><p>Lanterninha, Olheiro, Cobrador, Soldado, Capanga e Tenente de Rua.</p></div>
+      <div><b>👑 Gerência</b><p>Sub Gerente, Chefe de Setor e Alto Conselho.</p></div>
+    </div>
+  </aside>
+</form>
+{% endblock %}

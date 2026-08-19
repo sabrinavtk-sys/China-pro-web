@@ -1,0 +1,1837 @@
+console.log("DASHBOARD.JS v61 CARREGADO");
+
+
+// =========================================================
+// ESTADO
+// =========================================================
+
+let salvamentoEmAndamento = false;
+
+
+// =========================================================
+// INICIALIZAÇÃO
+// =========================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        console.log(
+            "INICIANDO EVENTOS DO DASHBOARD v42"
+        );
+
+
+        configurarBotaoProcessar();
+
+        configurarPorcentagem();
+
+        configurarBotaoSalvar();
+
+        configurarBotaoCopiar();
+
+
+        calcularGanho();
+
+
+        console.log(
+            "DASHBOARD.JS v42 PRONTO"
+        );
+
+    }
+);
+
+
+// =========================================================
+// BUSCAR ELEMENTO
+// =========================================================
+
+function obterElemento(id){
+
+    return document.getElementById(
+        id
+    );
+
+}
+
+
+// =========================================================
+// CONVERTER TEXTO MONETÁRIO
+// =========================================================
+
+function converterValorMonetario(valor){
+
+    if(
+        valor === null ||
+        valor === undefined
+    ){
+
+        return 0;
+
+    }
+
+
+    if(
+        typeof valor === "number"
+    ){
+
+        return Number.isFinite(valor)
+            ? valor
+            : 0;
+
+    }
+
+
+    let texto =
+    String(valor)
+        .trim()
+        .replace(/R\$/gi, "")
+        .replace(/\s/g, "");
+
+
+    if(!texto){
+
+        return 0;
+
+    }
+
+
+    /*
+        Exemplos aceitos:
+
+        1.400.000
+        1.400.000,00
+        1400000
+        1400000,00
+    */
+
+
+    if(
+        texto.includes(",")
+    ){
+
+        texto =
+        texto
+            .replace(/\./g, "")
+            .replace(",", ".");
+
+    }
+    else{
+
+        texto =
+        texto.replace(/\./g, "");
+
+    }
+
+
+    texto =
+    texto.replace(
+        /[^\d.-]/g,
+        ""
+    );
+
+
+    const numero =
+    Number(texto);
+
+
+    return Number.isFinite(numero)
+        ? numero
+        : 0;
+
+}
+
+
+// =========================================================
+// FORMATAR DINHEIRO
+// =========================================================
+
+function formatarDinheiro(valor){
+
+    const numero =
+    Number(valor) || 0;
+
+
+    return numero.toLocaleString(
+        "pt-BR",
+        {
+            style:
+                "currency",
+
+            currency:
+                "BRL",
+
+            minimumFractionDigits:
+                2,
+
+            maximumFractionDigits:
+                2
+        }
+    );
+
+}
+
+
+// =========================================================
+// PREVIEW DAS IMAGENS
+// =========================================================
+
+function previewImagem(
+    input,
+    idPreview
+){
+
+    const preview =
+    obterElemento(
+        idPreview
+    );
+
+
+    if(!preview){
+
+        console.warn(
+            "Preview não encontrado:",
+            idPreview
+        );
+
+        return;
+
+    }
+
+
+    const arquivo =
+    input?.files?.[0];
+
+
+    if(!arquivo){
+
+        preview.removeAttribute(
+            "src"
+        );
+
+        return;
+
+    }
+
+
+    if(
+        !arquivo.type ||
+        !arquivo.type.startsWith(
+            "image/"
+        )
+    ){
+
+        alert(
+            "Selecione um arquivo de imagem válido."
+        );
+
+
+        input.value =
+        "";
+
+
+        preview.removeAttribute(
+            "src"
+        );
+
+
+        return;
+
+    }
+
+
+    if(
+        preview.dataset.urlAnterior
+    ){
+
+        URL.revokeObjectURL(
+            preview.dataset.urlAnterior
+        );
+
+    }
+
+
+    const url =
+    URL.createObjectURL(
+        arquivo
+    );
+
+
+    preview.src =
+    url;
+
+
+    preview.dataset.urlAnterior =
+    url;
+
+
+    console.log(
+        "PREVIEW CARREGADO:",
+        arquivo.name
+    );
+
+}
+
+
+window.previewImagem =
+previewImagem;
+
+
+// =========================================================
+// CONFIGURAR BOTÃO PROCESSAR
+// =========================================================
+
+function configurarBotaoProcessar(){
+
+    const botao =
+    obterElemento(
+        "btnProcessar"
+    );
+
+
+    if(!botao){
+
+        console.warn(
+            "BOTÃO PROCESSAR NÃO ENCONTRADO"
+        );
+
+        return;
+
+    }
+
+
+    botao.addEventListener(
+        "click",
+        async function(){
+
+            if(
+                typeof window.processarOCR !==
+                "function"
+            ){
+
+                console.error(
+                    "FUNÇÃO processarOCR NÃO CARREGADA"
+                );
+
+
+                alert(
+                    "O sistema OCR ainda não foi carregado. Atualize a página e tente novamente."
+                );
+
+
+                return;
+
+            }
+
+
+            try{
+
+                await window.processarOCR();
+
+            }
+            catch(erro){
+
+                console.error(
+                    "ERRO AO PROCESSAR OCR:",
+                    erro
+                );
+
+
+                alert(
+                    "Não foi possível processar os prints."
+                );
+
+            }
+
+        }
+    );
+
+
+    console.log(
+        "BOTÃO PROCESSAR CONFIGURADO"
+    );
+
+}
+
+
+// =========================================================
+// CONFIGURAR PORCENTAGEM
+// =========================================================
+
+function configurarPorcentagem(){
+
+    const campo =
+    obterElemento(
+        "porcentagemAplicada"
+    );
+
+
+    if(!campo){
+
+        console.warn(
+            "CAMPO DE PORCENTAGEM NÃO ENCONTRADO"
+        );
+
+        return;
+
+    }
+
+
+    campo.addEventListener(
+        "input",
+        calcularGanho
+    );
+
+
+    campo.addEventListener(
+        "change",
+        function(){
+
+            normalizarPorcentagem();
+
+            calcularGanho();
+
+        }
+    );
+
+
+    console.log(
+        "CÁLCULO DE PORCENTAGEM CONFIGURADO"
+    );
+
+}
+
+
+// =========================================================
+// NORMALIZAR PORCENTAGEM
+// =========================================================
+
+function normalizarPorcentagem(){
+
+    const campo =
+    obterElemento(
+        "porcentagemAplicada"
+    );
+
+
+    if(!campo){
+
+        return -20;
+
+    }
+
+
+    let porcentagem =
+    Number(
+        campo.value
+    );
+
+
+    if(
+        !Number.isFinite(
+            porcentagem
+        )
+    ){
+
+        porcentagem =
+        -20;
+
+    }
+
+
+    porcentagem =
+    Math.max(
+        -40,
+        Math.min(
+            -20,
+            porcentagem
+        )
+    );
+
+
+    campo.value =
+    porcentagem;
+
+
+    return porcentagem;
+
+}
+
+
+
+// =========================================================
+// PORCENTAGEM AUTOMÁTICA
+// recebido = valor original (balão azul)
+// enviado  = valor depois da taxa (balão verde)
+// =========================================================
+
+function aplicarCalculoAutomatico(
+    recebido,
+    enviado
+){
+    const valorOriginal =
+        Number(recebido) || 0;
+
+    const valorEnviado =
+        Number(enviado) || 0;
+
+    const campo =
+        obterElemento(
+            "porcentagemAplicada"
+        );
+
+    const exibicao =
+        obterElemento(
+            "porcentagemExibida"
+        );
+
+    const campoGanho =
+        obterElemento(
+            "valorPorcentagem"
+        );
+
+    if(
+        valorOriginal <= 0 ||
+        valorEnviado <= 0 ||
+        valorOriginal <= valorEnviado
+    ){
+        if(campo){
+            campo.value = "";
+        }
+
+        if(exibicao){
+            exibicao.textContent =
+                "--%";
+        }
+
+        if(campoGanho){
+            campoGanho.innerText =
+                "R$ 0,00";
+        }
+
+        return null;
+    }
+
+
+    const ganho =
+        valorOriginal -
+        valorEnviado;
+
+
+    const percentualBruto =
+        (
+            ganho /
+            valorOriginal
+        )
+        * 100;
+
+
+    const percentualInteiro =
+        Math.round(
+            percentualBruto
+        );
+
+
+    const percentual =
+        Math.abs(
+            percentualBruto -
+            percentualInteiro
+        ) <= 0.35
+            ? percentualInteiro
+            : Number(
+                percentualBruto
+                    .toFixed(2)
+            );
+
+
+    if(
+        percentual < 20 ||
+        percentual > 40
+    ){
+        if(campo){
+            campo.value = "";
+        }
+
+        if(exibicao){
+            exibicao.textContent =
+                "ERRO";
+        }
+
+        if(campoGanho){
+            campoGanho.innerText =
+                formatarDinheiro(
+                    ganho
+                );
+        }
+
+        return null;
+    }
+
+
+    /*
+        O banco antigo guarda a porcentagem negativa
+        por compatibilidade. A tela e o relatório mostram positiva.
+    */
+    if(campo){
+        campo.value =
+            -percentual;
+    }
+
+
+    const percentualTexto =
+        Math.abs(percentual)
+        .toLocaleString(
+            "pt-BR",
+            {
+                minimumFractionDigits:
+                    Number.isInteger(percentual)
+                        ? 0
+                        : 2,
+                maximumFractionDigits: 2
+            }
+        );
+
+
+    if(exibicao){
+        exibicao.textContent =
+            `${percentualTexto}%`;
+    }
+
+
+    if(campoGanho){
+        campoGanho.innerText =
+            formatarDinheiro(
+                ganho
+            );
+    }
+
+
+    if(window.resultadoOCR){
+        window.resultadoOCR
+            .percentualAutomatico =
+            percentual;
+
+        window.resultadoOCR
+            .ganhoAutomatico =
+            ganho;
+    }
+
+
+    console.log(
+        "CÁLCULO AUTOMÁTICO:",
+        {
+            recebido:
+                valorOriginal,
+            enviado:
+                valorEnviado,
+            percentual,
+            ganho
+        }
+    );
+
+
+    return {
+        percentual,
+        ganho
+    };
+}
+
+
+window.aplicarCalculoAutomatico =
+aplicarCalculoAutomatico;
+
+
+// =========================================================
+// CALCULAR GANHO
+// =========================================================
+
+function calcularGanho(){
+
+    const resultado =
+        window.resultadoOCR ||
+        null;
+
+
+    if(
+        resultado &&
+        Number(resultado.recebido) > 0 &&
+        Number(resultado.envio) > 0
+    ){
+        const automatico =
+            aplicarCalculoAutomatico(
+                Number(
+                    resultado.recebido
+                ),
+                Number(
+                    resultado.envio
+                )
+            );
+
+        return automatico
+            ? automatico.ganho
+            : 0;
+    }
+
+
+    const campoResultado =
+        obterElemento(
+            "valorPorcentagem"
+        );
+
+
+    if(campoResultado){
+        campoResultado.innerText =
+            "R$ 0,00";
+    }
+
+
+    return 0;
+
+}
+
+
+window.calcularGanho =
+calcularGanho;
+
+
+// =========================================================
+// DADOS DA OPERAÇÃO
+// =========================================================
+
+function obterDadosOperacao(){
+
+    const nome =
+    obterElemento(
+        "nomeJogador"
+    )?.innerText?.trim() ||
+    "---";
+
+
+    const id =
+    obterElemento(
+        "idJogador"
+    )?.innerText?.trim() ||
+    "---";
+
+
+    /*
+        A data é preenchida automaticamente pelo servidor.
+        Ela não depende do OCR do print.
+    */
+
+    const data =
+    obterElemento(
+        "dataOperacao"
+    )?.innerText?.trim() ||
+    "---";
+
+
+    const valor =
+    converterValorMonetario(
+        obterElemento(
+            "valorRecebido"
+        )?.innerText
+    );
+
+
+    const porcentagem =
+    normalizarPorcentagem();
+
+
+    const valorEnvio =
+        Number(
+            window.resultadoOCR
+                ?.envio
+        ) || 0;
+
+
+    const ganho =
+        Number(
+            window.resultadoOCR
+                ?.ganhoAutomatico
+        ) ||
+        (
+            valor > 0 &&
+            valorEnvio > 0
+                ? (
+                    valor *
+                    Math.abs(porcentagem) /
+                    100
+                )
+                : 0
+        );
+
+
+    const observacoes =
+    obterElemento(
+        "observacoes"
+    )?.value?.trim() ||
+    "";
+
+
+    return {
+
+        nome_jogador:
+            nome,
+
+        id_jogador:
+            id,
+
+        data_exibicao:
+            data,
+
+        valor:
+            valor,
+
+        valor_envio:
+            valorEnvio,
+
+        porcentagem:
+            porcentagem,
+
+        valor_porcentagem:
+            ganho,
+
+        observacoes:
+            observacoes
+
+    };
+
+}
+
+
+// =========================================================
+// VALIDAR OPERAÇÃO
+// =========================================================
+
+function validarDadosOperacao(dados){
+
+    if(
+        !dados.nome_jogador ||
+        dados.nome_jogador === "---" ||
+        dados.nome_jogador === "Não identificado"
+    ){
+
+        alert(
+            "O nome do jogador não foi identificado."
+        );
+
+
+        return false;
+
+    }
+
+
+    if(
+        !dados.id_jogador ||
+        dados.id_jogador === "---" ||
+        dados.id_jogador === "Não identificado"
+    ){
+
+        alert(
+            "O ID do jogador não foi identificado."
+        );
+
+
+        return false;
+
+    }
+
+
+    if(
+        !Number.isFinite(
+            dados.valor
+        ) ||
+        dados.valor <= 0
+    ){
+
+        alert(
+            "O valor processado é inválido. Execute o OCR novamente."
+        );
+
+
+        return false;
+
+    }
+
+
+    if(
+        !dados.data_exibicao ||
+        dados.data_exibicao === "---"
+    ){
+
+        alert(
+            "A data e hora do print final não foram identificadas. Execute o OCR novamente."
+        );
+
+        return false;
+
+    }
+
+
+    if(
+        !Number.isFinite(
+            dados.valor_envio
+        ) ||
+        dados.valor_envio <= 0 ||
+        dados.valor_envio >= dados.valor
+    ){
+
+        alert(
+            "O valor enviado não foi identificado corretamente."
+        );
+
+        return false;
+
+    }
+
+
+    if(
+        dados.porcentagem < -40 ||
+        dados.porcentagem > -20
+    ){
+
+        alert(
+            "A porcentagem deve estar entre -40% e -20%."
+        );
+
+
+        return false;
+
+    }
+
+
+    if(
+        !Number.isFinite(
+            dados.valor_porcentagem
+        ) ||
+        dados.valor_porcentagem <= 0
+    ){
+
+        alert(
+            "O ganho da operação é inválido."
+        );
+
+
+        return false;
+
+    }
+
+
+    return true;
+
+}
+
+
+// =========================================================
+// CONFIGURAR BOTÃO SALVAR
+// =========================================================
+
+function configurarBotaoSalvar(){
+
+    const botao =
+    obterElemento(
+        "salvarComprovante"
+    );
+
+
+    console.log(
+        "BOTÃO SALVAR:",
+        Boolean(botao)
+    );
+
+
+    if(!botao){
+
+        return;
+
+    }
+
+
+    botao.addEventListener(
+        "click",
+        salvarComprovante
+    );
+
+}
+
+
+// =========================================================
+// ALTERAR BOTÃO SALVAR
+// =========================================================
+
+function definirEstadoBotaoSalvar(
+    salvando
+){
+
+    const botao =
+    obterElemento(
+        "salvarComprovante"
+    );
+
+
+    if(!botao){
+
+        return;
+
+    }
+
+
+    botao.disabled =
+    salvando;
+
+
+    if(salvando){
+
+        botao.innerHTML =
+        `
+            <span>⏳</span>
+
+            <div>
+                <strong>SALVANDO...</strong>
+                <small>Aguarde um instante</small>
+            </div>
+        `;
+
+    }
+    else{
+
+        botao.innerHTML =
+        `
+            <span>💾</span>
+
+            <div>
+                <strong>SALVAR OPERAÇÃO</strong>
+                <small>Registrar no histórico</small>
+            </div>
+        `;
+
+    }
+
+}
+
+
+
+async function blobParaDataURL(blob){
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const tamanhoBloco = 0x8000;
+    let binario = "";
+
+    for(let inicio = 0; inicio < bytes.length; inicio += tamanhoBloco){
+        const fim = Math.min(inicio + tamanhoBloco, bytes.length);
+        binario += String.fromCharCode(...bytes.subarray(inicio, fim));
+    }
+
+    return `data:${blob.type};base64,${btoa(binario)}`;
+}
+
+async function arquivoParaDataURL(
+    arquivo
+){
+
+    if(!arquivo){
+        return null;
+    }
+
+    if(
+        !arquivo.type ||
+        !arquivo.type.startsWith("image/")
+    ){
+        throw new Error(
+            "Um dos arquivos selecionados não é uma imagem válida."
+        );
+    }
+
+    let bitmap = null;
+
+    try{
+
+        bitmap =
+            await createImageBitmap(
+                arquivo
+            );
+
+        /*
+            IMPORTANTE:
+            O OCR usa o arquivo ORIGINAL.
+            Esta redução acontece somente DEPOIS,
+            para criar a cópia que será salva no histórico.
+        */
+        const larguraMaxima =
+            960;
+
+        const alturaMaxima =
+            540;
+
+        const escala =
+            Math.min(
+                1,
+                larguraMaxima / bitmap.width,
+                alturaMaxima / bitmap.height
+            );
+
+        const largura =
+            Math.max(
+                1,
+                Math.round(
+                    bitmap.width *
+                    escala
+                )
+            );
+
+        const altura =
+            Math.max(
+                1,
+                Math.round(
+                    bitmap.height *
+                    escala
+                )
+            );
+
+        const canvas =
+            document.createElement(
+                "canvas"
+            );
+
+        canvas.width =
+            largura;
+
+        canvas.height =
+            altura;
+
+        const ctx =
+            canvas.getContext(
+                "2d",
+                {
+                    alpha: false
+                }
+            );
+
+        if(!ctx){
+            throw new Error(
+                "Não foi possível gerar a cópia reduzida do print."
+            );
+        }
+
+        ctx.drawImage(
+            bitmap,
+            0,
+            0,
+            largura,
+            altura
+        );
+
+        /*
+            Meta extremamente segura para Vercel:
+            até ~350 KB por print.
+            Dois prints em Base64 ficam bem abaixo de 4,5 MB.
+        */
+        const tamanhoAlvo =
+            350 * 1024;
+
+        let qualidade =
+            0.68;
+
+        let blob = null;
+
+        while(
+            qualidade >= 0.30
+        ){
+
+            blob =
+                await new Promise(
+                    resolve =>
+                        canvas.toBlob(
+                            resolve,
+                            "image/jpeg",
+                            qualidade
+                        )
+                );
+
+            if(!blob){
+                throw new Error(
+                    "O navegador não conseguiu comprimir o print."
+                );
+            }
+
+            if(
+                blob.size <=
+                tamanhoAlvo
+            ){
+                break;
+            }
+
+            qualidade -=
+                0.07;
+
+        }
+
+        /*
+            Fallback extremo:
+            se ainda estiver grande, cria 720x405.
+        */
+        if(
+            !blob ||
+            blob.size >
+            450 * 1024
+        ){
+
+            const canvasMenor =
+                document.createElement(
+                    "canvas"
+                );
+
+            canvasMenor.width =
+                720;
+
+            canvasMenor.height =
+                405;
+
+            const ctxMenor =
+                canvasMenor.getContext(
+                    "2d",
+                    {
+                        alpha: false
+                    }
+                );
+
+            if(!ctxMenor){
+                throw new Error(
+                    "Não foi possível gerar a versão compacta do print."
+                );
+            }
+
+            ctxMenor.drawImage(
+                bitmap,
+                0,
+                0,
+                canvasMenor.width,
+                canvasMenor.height
+            );
+
+            blob =
+                await new Promise(
+                    resolve =>
+                        canvasMenor.toBlob(
+                            resolve,
+                            "image/jpeg",
+                            0.42
+                        )
+                );
+
+        }
+
+        if(!blob){
+            throw new Error(
+                "Não foi possível comprimir o print."
+            );
+        }
+
+        console.log(
+            "PRINT SALVO COMPACTADO:",
+            {
+                nome:
+                    arquivo.name,
+
+                originalKB:
+                    Math.round(
+                        arquivo.size /
+                        1024
+                    ),
+
+                finalKB:
+                    Math.round(
+                        blob.size /
+                        1024
+                    ),
+
+                resolucao:
+                    `${largura}x${altura}`
+            }
+        );
+
+        return await blobParaDataURL(
+            blob
+        );
+
+    }
+    catch(erro){
+
+        console.error(
+            "ERRO AO PREPARAR PRINT:",
+            erro
+        );
+
+        throw new Error(
+            "Não foi possível preparar os prints para salvar."
+        );
+
+    }
+    finally{
+
+        if(
+            bitmap &&
+            typeof bitmap.close ===
+            "function"
+        ){
+            bitmap.close();
+        }
+
+    }
+
+}
+
+
+// =========================================================
+// SALVAR COMPROVANTE
+// =========================================================
+
+async function salvarComprovante(){
+
+    if(salvamentoEmAndamento){
+
+        return false;
+
+    }
+
+
+    const dados =
+    obterDadosOperacao();
+
+
+    if(
+        !validarDadosOperacao(
+            dados
+        )
+    ){
+
+        return false;
+
+    }
+
+
+    try{
+
+        salvamentoEmAndamento =
+        true;
+
+
+        definirEstadoBotaoSalvar(
+            true
+        );
+
+
+        /*
+            Os prints são usados pelo OCR somente no navegador.
+            Depois do processamento eles NÃO são enviados ao servidor
+            e NÃO ocupam espaço no Neon.
+        */
+        dados.print_envio_base64 =
+            null;
+
+        dados.print_recebimento_base64 =
+            null;
+
+        console.log(
+            "SALVANDO OPERAÇÃO:",
+            {
+                ...dados,
+                print_envio_base64: dados.print_envio_base64 ? "[imagem]" : null,
+                print_recebimento_base64: dados.print_recebimento_base64 ? "[imagem]" : null
+            }
+        );
+
+
+        const resposta =
+        await fetch(
+            "/salvar-operacao",
+            {
+                method:
+                    "POST",
+
+                headers:{
+                    "Content-Type":
+                        "application/json",
+
+                    "Accept":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(
+                        dados
+                    )
+            }
+        );
+
+
+        let retorno;
+
+
+        try{
+
+            retorno =
+            await resposta.json();
+
+        }
+        catch(erro){
+
+            console.error(
+                "RESPOSTA INVÁLIDA DO SERVIDOR:",
+                erro
+            );
+
+
+            throw new Error(
+                "O servidor retornou uma resposta inválida."
+            );
+
+        }
+
+
+        if(
+            !resposta.ok ||
+            !retorno.sucesso
+        ){
+
+            throw new Error(
+                retorno.erro ||
+                retorno.mensagem ||
+                "Não foi possível salvar a operação."
+            );
+
+        }
+
+
+        console.log(
+            "OPERAÇÃO SALVA:",
+            retorno
+        );
+
+
+        alert(
+            "✅ Operação salva com sucesso!"
+        );
+
+
+        /*
+            Abre o histórico imediatamente para confirmar
+            que a operação foi registrada no banco.
+        */
+
+        window.location.href =
+        "/historico?atualizado=" +
+        Date.now();
+
+
+        return true;
+
+    }
+    catch(erro){
+
+        console.error(
+            "ERRO AO SALVAR:",
+            erro
+        );
+
+
+        alert(
+            "❌ Erro ao salvar: " +
+            (
+                erro.message ||
+                "erro desconhecido"
+            )
+        );
+
+
+        return false;
+
+    }
+    finally{
+
+        salvamentoEmAndamento =
+        false;
+
+
+        definirEstadoBotaoSalvar(
+            false
+        );
+
+    }
+
+}
+
+
+window.salvarComprovante =
+salvarComprovante;
+
+
+// =========================================================
+// CONFIGURAR BOTÃO COPIAR
+// =========================================================
+
+function configurarBotaoCopiar(){
+
+    const botao =
+    obterElemento(
+        "copiarComprovante"
+    );
+
+
+    console.log(
+        "BOTÃO COPIAR:",
+        Boolean(botao)
+    );
+
+
+    if(!botao){
+
+        return;
+
+    }
+
+
+    botao.addEventListener(
+        "click",
+        copiarComprovante
+    );
+
+}
+
+
+// =========================================================
+// GERAR TEXTO DO COMPROVANTE
+// =========================================================
+
+function gerarTextoComprovante(){
+
+    const dados = obterDadosOperacao();
+
+    const valorFormatado =
+        formatarDinheiro(
+            dados.valor
+        );
+
+    const ganhoFormatado =
+        formatarDinheiro(
+            Math.abs(
+                Number(
+                    dados.valor_porcentagem || 0
+                )
+            )
+        );
+
+    const porcentagem =
+        Math.abs(
+            Number(
+                dados.porcentagem || 0
+            )
+        );
+
+    const porcentagemFormatada =
+        Number.isInteger(
+            porcentagem
+        )
+        ? String(
+            porcentagem
+        )
+        : porcentagem
+            .toFixed(2)
+            .replace(".", ",");
+
+    const observacoes =
+        dados.observacoes ||
+        "Sem observações.";
+
+    return (
+`CHINA PRO EXTRACTOR — RESUMO DA OPERAÇÃO
+
+👤 Jogador: ${dados.nome_jogador}
+🆔 ID: ${dados.id_jogador}
+📅 Data: ${dados.data_exibicao}
+
+💵 Valor processado: ${valorFormatado}
+📊 Porcentagem aplicada: ${porcentagemFormatada}%
+💎 Ganho da operação: ${ganhoFormatado}
+
+📝 Observações: ${observacoes}`
+    );
+
+}
+
+
+// =========================================================
+// COPIAR COMPROVANTE — SOMENTE TEXTO
+// =========================================================
+
+async function copiarComprovante(){
+
+    const dados =
+        obterDadosOperacao();
+
+    if(
+        !validarDadosOperacao(
+            dados
+        )
+    ){
+        return false;
+    }
+
+    const texto =
+        gerarTextoComprovante();
+
+    try{
+
+        if(
+            navigator.clipboard &&
+            window.isSecureContext
+        ){
+
+            await navigator.clipboard.writeText(
+                texto
+            );
+
+        }
+        else{
+
+            copiarTextoAlternativo(
+                texto
+            );
+
+        }
+
+        alert(
+            "✅ Relatório em texto copiado!"
+        );
+
+        return true;
+
+    }
+    catch(erro){
+
+        console.error(
+            "ERRO AO COPIAR RELATÓRIO:",
+            erro
+        );
+
+        try{
+
+            copiarTextoAlternativo(
+                texto
+            );
+
+            alert(
+                "✅ Relatório em texto copiado!"
+            );
+
+            return true;
+
+        }
+        catch(erroAlternativo){
+
+            console.error(
+                "ERRO NO MÉTODO ALTERNATIVO:",
+                erroAlternativo
+            );
+
+            alert(
+                "❌ Não foi possível copiar o relatório."
+            );
+
+            return false;
+
+        }
+
+    }
+
+}
+
+
+window.copiarComprovante =
+copiarComprovante;
+
+
+// =========================================================
+// MÉTODO ALTERNATIVO DE CÓPIA
+// =========================================================
+
+function copiarTextoAlternativo(texto){
+
+    const campo =
+    document.createElement(
+        "textarea"
+    );
+
+
+    campo.value =
+    texto;
+
+
+    campo.setAttribute(
+        "readonly",
+        ""
+    );
+
+
+    campo.style.position =
+    "fixed";
+
+
+    campo.style.top =
+    "-9999px";
+
+
+    campo.style.left =
+    "-9999px";
+
+
+    campo.style.opacity =
+    "0";
+
+
+    document.body.appendChild(
+        campo
+    );
+
+
+    campo.focus();
+
+    campo.select();
+
+
+    campo.setSelectionRange(
+        0,
+        campo.value.length
+    );
+
+
+    const copiado =
+    document.execCommand(
+        "copy"
+    );
+
+
+    campo.remove();
+
+
+    if(!copiado){
+
+        throw new Error(
+            "O navegador recusou a cópia."
+        );
+
+    }
+
+}
+
+
+// =========================================================
+// LIMPAR FORMULÁRIO APÓS OCR
+// =========================================================
+
+function limparDadosOperacao(){
+
+    const camposTexto = {
+
+        nomeJogador:
+            "---",
+
+        idJogador:
+            "---",
+
+        valorRecebido:
+            "R$ 0",
+
+        valorPorcentagem:
+            "R$ 0,00"
+
+    };
+
+
+    Object.entries(
+        camposTexto
+    ).forEach(
+        function([
+            id,
+            valor
+        ]){
+
+            const elemento =
+            obterElemento(
+                id
+            );
+
+
+            if(elemento){
+
+                elemento.innerText =
+                valor;
+
+            }
+
+        }
+    );
+
+
+    const porcentagem =
+    obterElemento(
+        "porcentagemAplicada"
+    );
+
+
+    if(porcentagem){
+
+        porcentagem.value =
+        "";
+
+    }
+
+    const porcentagemExibida =
+        obterElemento(
+            "porcentagemExibida"
+        );
+
+    if(porcentagemExibida){
+        porcentagemExibida.textContent =
+            "--%";
+    }
+
+
+    const observacoes =
+    obterElemento(
+        "observacoes"
+    );
+
+
+    if(observacoes){
+
+        observacoes.value =
+        "";
+
+    }
+
+
+    calcularGanho();
+
+}
+
+
+window.limparDadosOperacao =
+limparDadosOperacao;
+
+
+// =========================================================
+// EXPORTAÇÕES
+// =========================================================
+
+window.converterValorMonetario =
+converterValorMonetario;
+
+
+window.formatarDinheiro =
+formatarDinheiro;
+
+
+console.log(
+    "FUNÇÕES DO DASHBOARD v42 DISPONÍVEIS"
+);

@@ -1,0 +1,50 @@
+{% extends "base_gestao.html" %}
+{% block title %}Desmanches — China PRO{% endblock %}
+{% block page_heading %}Desmanches{% endblock %}
+{% block content %}
+<section class="page-intro">
+  <div><span class="kicker">VEÍCULO DESMANCHADO</span><h2>🚗 Registrar desmanche</h2><p class="muted">Escolha +2 pontos para Ação ou +1 ponto para Lavagem.</p></div>
+</section>
+
+<section class="content-grid content-grid-2">
+  <form id="formDesmanche" class="card form-card">
+    <div class="form-grid">
+      <div><label>Modelo do veículo</label><input id="modelo" placeholder="Ex.: AMG G65" required></div>
+      <div><label>Data e hora</label><input id="dataDesmanche" type="datetime-local" required></div>
+      <div><label>Quantidade recebida</label><input id="quantidade" type="number" min="1" step="0.01" placeholder="56000" required></div>
+      <div><label>Pontuação</label><select id="destino" required><option value="acao">🔫 Ação — +2 pontos</option><option value="lavagem">💰 Lavagem — +1 ponto</option></select></div>
+    </div>
+
+    <div class="proof">
+      <label>📸 Print do desmanche — obrigatório</label>
+      <input id="provaDesmanche" type="file" accept="image/*" required>
+      <small class="muted">O print é validado durante o registro e não fica armazenado no servidor.</small>
+    </div>
+    <div class="actions"><button type="submit">Salvar desmanche</button></div>
+    <div id="statusDesmanche"></div>
+  </form>
+
+  <aside class="card info-card">
+    <span class="kicker">MODELO DO RELATÓRIO</span>
+    <h2>Como fica o registro</h2>
+    <div class="record-preview">
+      <b>🚗 Veículo Desmanchado</b>
+      <p><span>Modelo:</span> AMG G65</p>
+      <p><span>Data e hora:</span> 17/08/2026 22:07</p>
+      <p><span>Quantidade recebida:</span> R$ 56.000</p>
+      <p><span>Print:</span> Validado</p>
+    </div>
+    <div class="notice">Duplicidade é bloqueada automaticamente pelo usuário, veículo, horário, valor, destino e assinatura do print.</div>
+  </aside>
+</section>
+
+<section class="card section-block">
+  <div class="section-title"><div><h2>Últimos desmanches</h2><small class="muted">Seus registros recentes</small></div></div>
+  <div class="list">
+  {% for item in ultimos %}
+    <div class="item"><div class="row"><b>{{ item.modelo }}</b><span class="pill">+{{ item.pontos }} {{ item.destino_pontos }}</span></div><small>R$ {{ "{:,.2f}".format(item.quantidade).replace(",", "X").replace(".", ",").replace("X", ".") }} • {{ item.data_hora.astimezone().strftime('%d/%m/%Y %H:%M') }}</small></div>
+  {% else %}<div class="empty-state">Nenhum desmanche registrado ainda.</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260819"></script>{% endblock %}

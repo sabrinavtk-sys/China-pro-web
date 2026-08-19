@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07070a">
+  <title>China PRO — Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=2027">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+</head>
+<body class="china-login china-login-v2">
+  <div class="login-scene-overlay"></div>
+
+  <main class="login-page">
+    <header class="login-brand-zone">
+      <img src="{{ url_for('static', filename='img/china-logo-user-web.jpg') }}" alt="China PRO" class="login-main-logo">
+      <div>
+        <div class="login-brand-title">CHINA <span>PRO</span></div>
+        <div class="login-brand-subtitle">SISTEMA DE GESTÃO</div>
+      </div>
+    </header>
+
+    <section class="login-real-card" aria-label="Login">
+      <div class="login-card-head">
+        <span class="login-card-kicker">ACESSO AO SISTEMA</span>
+        <h1>Entre na sua conta</h1>
+        <p>Use seus dados para continuar.</p>
+      </div>
+
+      {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+
+      <form method="POST" class="login-real-form">
+        <label>Usuário</label>
+        <div class="login-field"><span>👤</span><input type="text" name="usuario" placeholder="Digite seu usuário" required autocomplete="username"></div>
+        <label>Senha</label>
+        <div class="login-field"><span>🔒</span><input type="password" name="senha" placeholder="Digite sua senha" required autocomplete="current-password"></div>
+
+        <div class="login-row-meta">
+          <span>🔐 Acesso protegido</span>
+          <span>Sistema online</span>
+        </div>
+
+        <button type="submit" class="login-submit">ENTRAR <span>→</span></button>
+      </form>
+
+      <a class="login-create" href="{{ url_for('cadastro') }}">Não tem uma conta? <b>Criar agora</b></a>
+    </section>
+
+    <section class="login-feature-grid" aria-label="Recursos do sistema">
+      <article><div class="login-feature-icon">💰</div><b>Lavagens</b><small>OCR e registros</small></article>
+      <article><div class="login-feature-icon">🔫</div><b>Ações</b><small>Pontos e histórico</small></article>
+      <article><div class="login-feature-icon">🚗</div><b>Desmanches</b><small>Controle de registros</small></article>
+      <article><div class="login-feature-icon">🏆</div><b>Ranking</b><small>Acompanhe posições</small></article>
+      <article><div class="login-feature-icon">🛡️</div><b>Segurança</b><small>Dados protegidos</small></article>
+    </section>
+
+    <footer class="login-footer-real">
+      <span>© 2026 CHINA PRO</span>
+      <span>Disciplina • Lealdade • Respeito • União • Vitória</span>
+    </footer>
+  </main>
+</body>
+</html>
