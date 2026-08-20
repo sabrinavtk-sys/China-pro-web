@@ -15,9 +15,9 @@
 </section>
 
 <div class="admin-top-actions">
-  <a class="btn secondary" href="{{ url_for('admin_logs') }}">
-    📜 Logs dos ADMs
-  </a>
+  <a class="btn secondary" href="{{ url_for('admin_logs') }}">📜 Logs dos ADMs</a>
+  <a class="btn secondary" href="{{ url_for('admin_correcoes') }}">📝 Correções{% if correcoes_pendentes %} ({{ correcoes_pendentes }}){% endif %}</a>
+  <a class="btn secondary" href="{{ url_for('admin_backup') }}">💾 Backup JSON</a>
 </div>
 
 <section class="stats-grid stats-grid-4 admin-stats">
@@ -113,6 +113,39 @@
 </section>
 {% endif %}
 
+
+<section class="card admin-filter-card">
+  <form method="GET" class="admin-filter-grid">
+    <div>
+      <label>Pesquisar membro</label>
+      <input name="q" value="{{ q }}" placeholder="Nome, usuário, ID Game ou cargo">
+    </div>
+    <div>
+      <label>Status</label>
+      <select name="status">
+        <option value="todos" {% if filtro_status=='todos' %}selected{% endif %}>Todos</option>
+        <option value="ativo" {% if filtro_status=='ativo' %}selected{% endif %}>Ativos</option>
+        <option value="inativo" {% if filtro_status=='inativo' %}selected{% endif %}>Desativados</option>
+        <option value="adv" {% if filtro_status=='adv' %}selected{% endif %}>1 ADV ativa</option>
+        <option value="pd" {% if filtro_status=='pd' %}selected{% endif %}>Situação de PD</option>
+      </select>
+    </div>
+    <div>
+      <label>Setor</label>
+      <select name="setor">
+        <option value="todos" {% if filtro_setor=='todos' %}selected{% endif %}>Todos</option>
+        <option value="lavagem" {% if filtro_setor=='lavagem' %}selected{% endif %}>Lavagem</option>
+        <option value="acao" {% if filtro_setor=='acao' %}selected{% endif %}>Ação</option>
+        <option value="gerencia" {% if filtro_setor=='gerencia' %}selected{% endif %}>Gerência</option>
+      </select>
+    </div>
+    <div class="admin-filter-action">
+      <button type="submit">Filtrar</button>
+      <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">Limpar</a>
+    </div>
+  </form>
+</section>
+
 <section class="card section-block">
   <div class="section-title">
     <div>
@@ -133,6 +166,7 @@
           <th>ID Game</th>
           <th>Setor / Cargo</th>
           <th>Status</th>
+          <th>ADV</th>
           <th>Atividade</th>
           <th>Ações ADM</th>
         </tr>
@@ -168,6 +202,16 @@
               <span class="admin-status active">● Ativa</span>
             {% else %}
               <span class="admin-status inactive">● Desativada</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if item.quantidade_adv >= 2 %}
+              <span class="admin-status inactive">2/2 • PD</span>
+            {% elif item.quantidade_adv == 1 %}
+              <span class="admin-status warning-text">1/2 • ADV</span>
+            {% else %}
+              <span class="admin-status active">0/2</span>
             {% endif %}
           </td>
 
@@ -226,7 +270,7 @@
 
       {% else %}
         <tr>
-          <td colspan="7">
+          <td colspan="8">
             <div class="empty-state">
               Nenhum membro cadastrado.
             </div>

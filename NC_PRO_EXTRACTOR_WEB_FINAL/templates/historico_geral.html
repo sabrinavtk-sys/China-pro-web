@@ -23,6 +23,15 @@
       <div class="history-content">
         <div class="row"><b>{{ item.tipo }} — {{ item.titulo }}</b><span class="pill">{{ item.data.astimezone().strftime('%d/%m/%Y %H:%M') }}</span></div>
         <p>{{ item.detalhe }}</p>
+        <details class="correction-details">
+          <summary>📝 Solicitar correção</summary>
+          <form method="POST" action="{{ url_for('solicitar_correcao_registro') }}">
+            <input type="hidden" name="registro_tipo" value="{{ item.tipo_slug }}">
+            <input type="hidden" name="registro_id" value="{{ item.registro_id }}">
+            <textarea name="motivo" placeholder="Explique o que está errado e como deveria ficar..." required></textarea>
+            <button type="submit">Enviar ao ADM</button>
+          </form>
+        </details>
       </div>
     </article>
   {% else %}

@@ -687,3 +687,96 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
   .china-app .side::-webkit-scrollbar-thumb:hover{background:rgba(239,46,112,.85)}
   .china-app .side nav{padding-bottom:18px!important}
 }
+
+
+/* =========================================================
+   UPDATE 2026-08-20 — NOTIFICAÇÕES / RANKING / ADMIN
+   ========================================================= */
+.notif-bell{
+  position:relative;
+  width:38px;height:38px;
+  display:grid;place-items:center;
+  border:1px solid #30232b;
+  border-radius:10px;
+  background:#0e0d11;
+  color:#fff;text-decoration:none;
+}
+.notif-bell span{
+  position:absolute;right:-5px;top:-6px;
+  min-width:18px;height:18px;padding:0 5px;
+  display:grid;place-items:center;
+  border-radius:999px;
+  background:#ef2e70;color:#fff;
+  font-size:9px;font-weight:900;
+}
+.notification-list,.request-list{display:grid;gap:10px}
+.notification-item{
+  display:grid;grid-template-columns:10px minmax(0,1fr);gap:12px;
+  padding:14px;border:1px solid #282027;border-radius:11px;background:#0d0c10;
+}
+.notification-item.unread{border-color:rgba(239,46,112,.34);background:rgba(239,46,112,.045)}
+.notification-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:#4d454b}
+.notification-item.unread .notification-dot{background:#ef2e70;box-shadow:0 0 14px rgba(239,46,112,.55)}
+.notification-item p{margin:6px 0 0;color:#aaa0a7;line-height:1.5}
+
+.ranking-podium-section{margin-bottom:14px}
+.podium-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.podium-card{
+  padding:16px;border:1px solid #2c2228;border-radius:11px;background:#0d0c10;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px
+}
+.podium-card.place-1{border-color:rgba(255,200,90,.32)}
+.podium-medal{font-size:25px}
+.podium-card small{color:#91878e}
+.podium-card b{color:#ffc85a}
+.my-ranking-position{
+  margin-top:12px;padding:12px 14px;border:1px solid rgba(239,46,112,.26);
+  border-radius:10px;background:rgba(239,46,112,.055);
+  display:flex;align-items:center;gap:12px
+}
+.my-ranking-position strong{font-size:20px;color:#ff6c9c}
+.my-ranking-position small{margin-left:auto;color:#a69ca4}
+.rank-me{background:rgba(239,46,112,.055)!important;outline:1px solid rgba(239,46,112,.18)}
+
+.admin-filter-card{margin:14px 0}
+.admin-filter-grid{
+  display:grid;grid-template-columns:minmax(220px,1.4fr) 180px 180px auto;
+  gap:10px;align-items:end
+}
+.admin-filter-grid label{margin-top:0!important}
+.admin-filter-action{display:flex;gap:7px}
+.warning-text{color:#ffc570!important}
+
+.correction-card{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.7fr);
+  gap:14px;padding:14px;border:1px solid #2b2127;border-radius:11px;background:#0d0c10
+}
+.correction-card p{margin:6px 0;line-height:1.5}
+.correction-actions{display:grid;gap:8px}
+.correction-actions form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:end}
+.correction-details{margin-top:8px}
+.correction-details summary{cursor:pointer;color:#ff77a4;font-size:11px;font-weight:800}
+.correction-details form{margin-top:9px;display:grid;gap:7px}
+.correction-details textarea{min-height:80px!important}
+
+.adv-user-summary{
+  display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:10px;
+  border:1px solid #2b2127;border-radius:10px;background:#0d0c10
+}
+.adv-user-summary strong{font-size:24px;color:#ff6e9f}
+.adv-user-summary span{color:#aaa0a7}
+
+@media(max-width:1050px){
+  .admin-filter-grid{grid-template-columns:1fr 1fr}
+  .podium-grid{grid-template-columns:1fr}
+  .correction-card{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .admin-filter-grid{grid-template-columns:1fr}
+  .admin-filter-action{flex-direction:column}
+  .admin-filter-action .btn,.admin-filter-action button{width:100%!important}
+  .my-ranking-position{align-items:flex-start;flex-direction:column}
+  .my-ranking-position small{margin-left:0}
+  .correction-actions form{grid-template-columns:1fr}
+  .app-topbar{gap:9px!important}
+}

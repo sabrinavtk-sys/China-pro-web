@@ -2,6 +2,7 @@ from functools import wraps
 import hashlib
 import re
 import logging
+import json
 import base64
 import binascii
 from datetime import datetime, time, timedelta, timezone
@@ -27,7 +28,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import bcrypt, db
-from models import Acao, AdvertenciaAdmin, Desmanche, ExtratoPonto, LogAdmin, MetaSemanalUsuario, Operacao, PerfilGame, PerfilSetor, SolicitacaoPerfilGame, Usuario
+from models import Acao, AdvertenciaAdmin, Desmanche, ExtratoPonto, LogAdmin, MetaSemanalUsuario, Notificacao, Operacao, PerfilGame, PerfilSetor, SolicitacaoCorrecao, SolicitacaoPerfilGame, Usuario
 
 
 logger = logging.getLogger(__name__)
@@ -255,6 +256,26 @@ def nome_membro_exibicao(usuario):
 
 
 
+
+def criar_notificacao(usuario_id, titulo, mensagem, tipo="info"):
+    notificacao = Notificacao(
+        usuario_id=usuario_id,
+        titulo=limpar_texto(titulo, 160),
+        mensagem=limpar_texto(mensagem, 1200),
+        tipo=limpar_texto(tipo, 40) or "info",
+        lida=False,
+    )
+    db.session.add(notificacao)
+    return notificacao
+
+
+def total_notificacoes_nao_lidas(usuario_id):
+    return Notificacao.query.filter_by(
+        usuario_id=usuario_id,
+        lida=False,
+    ).count()
+
+
 def registrar_log_admin(acao, alvo_usuario_id=None, detalhes=None):
     log = LogAdmin(
         admin_id=current_user.id if current_user.is_authenticated else None,
@@ -289,6 +310,20 @@ def admin_required(funcao):
 
 
 def configurar_rotas(app):
+
+    @app.context_processor
+    def contexto_notificacoes():
+        try:
+            if current_user.is_authenticated:
+                return {
+                    "notificacoes_nao_lidas":
+                        total_notificacoes_nao_lidas(current_user.id)
+                }
+        except Exception:
+            pass
+        return {"notificacoes_nao_lidas": 0}
+
+
 
     @app.context_processor
     def contexto_primeiro_admin():
@@ -878,9 +913,7 @@ def configurar_rotas(app):
                 data_exibicao,
                 "%d/%m/%Y %H:%M",
             ).replace(
-                tzinfo=ZoneInfo(
-                    "America/Sao_Paulo"
-                )
+                tzinfo=FUSO_LOCAL
             )
 
             criado_em_operacao = (
@@ -932,21 +965,43 @@ def configurar_rotas(app):
     @login_required
     @admin_required
     def admin_dashboard():
-        usuarios = Usuario.query.order_by(
+        q = limpar_texto(
+            request.args.get("q"),
+            100,
+        ).lower()
+
+        filtro_status = limpar_texto(
+            request.args.get("status", "todos"),
+            20,
+        )
+
+        filtro_setor = limpar_texto(
+            request.args.get("setor", "todos"),
+            30,
+        )
+
+        if filtro_status not in {"todos", "ativo", "inativo", "adv", "pd"}:
+            filtro_status = "todos"
+
+        if filtro_setor not in {"todos", "lavagem", "acao", "gerencia"}:
+            filtro_setor = "todos"
+
+        usuarios = Usuario.query.filter(
+            Usuario.is_admin.is_(False)
+        ).order_by(
             Usuario.usuario.asc()
         ).all()
 
         membros = []
 
         for usuario in usuarios:
-            if getattr(usuario, "is_admin", False):
-                continue
-
             perfil = PerfilSetor.query.filter_by(
                 usuario_id=usuario.id
             ).first()
 
             perfil_game = obter_perfil_game(usuario.id)
+            adv_ativas = advertencias_ativas(usuario.id)
+            quantidade_adv = len(adv_ativas)
 
             total_lavagens = Operacao.query.filter_by(
                 usuario_id=usuario.id
@@ -980,6 +1035,38 @@ def configurar_rotas(app):
                 ExtratoPonto.categoria == "lavagem",
             ).scalar()
 
+            cargo = usuario.cargo
+            setor = "lavagem"
+
+            if perfil and perfil.setor_acao:
+                cargo = perfil.cargo_acao or cargo
+                setor = (
+                    "gerencia"
+                    if cargo in CARGOS_GERENCIA
+                    else "acao"
+                )
+
+            texto_busca = " ".join([
+                usuario.usuario or "",
+                perfil_game.nome_game if perfil_game else "",
+                perfil_game.id_game if perfil_game else "",
+                cargo or "",
+            ]).lower()
+
+            if q and q not in texto_busca:
+                continue
+
+            if filtro_status == "ativo" and not usuario.ativo:
+                continue
+            if filtro_status == "inativo" and usuario.ativo:
+                continue
+            if filtro_status == "adv" and quantidade_adv != 1:
+                continue
+            if filtro_status == "pd" and quantidade_adv < 2:
+                continue
+            if filtro_setor != "todos" and setor != filtro_setor:
+                continue
+
             membros.append({
                 "usuario": usuario,
                 "perfil": perfil,
@@ -989,9 +1076,16 @@ def configurar_rotas(app):
                 "desmanches": total_desmanches,
                 "pontos_acao": int(pontos_acao or 0),
                 "pontos_lavagem": int(pontos_lavagem or 0),
+                "advertencias_ativas": adv_ativas,
+                "quantidade_adv": quantidade_adv,
+                "setor_exibicao": setor,
+                "cargo_exibicao": cargo,
             })
 
-        total_membros = len(membros)
+        total_membros = Usuario.query.filter(
+            Usuario.is_admin.is_(False)
+        ).count()
+
         total_acoes_geral = Acao.query.count()
         total_desmanches_geral = Desmanche.query.count()
         total_lavagens_geral = Operacao.query.count()
@@ -1001,6 +1095,7 @@ def configurar_rotas(app):
         ).order_by(
             SolicitacaoPerfilGame.solicitado_em.asc()
         ).all()
+
         solicitacoes = [
             {
                 "solicitacao": sol,
@@ -1008,6 +1103,10 @@ def configurar_rotas(app):
             }
             for sol in solicitacoes_pendentes
         ]
+
+        correcoes_pendentes = SolicitacaoCorrecao.query.filter_by(
+            status="pendente"
+        ).count()
 
         return render_template(
             "admin_dashboard.html",
@@ -1018,9 +1117,11 @@ def configurar_rotas(app):
             total_lavagens_geral=total_lavagens_geral,
             solicitacoes=solicitacoes,
             total_solicitacoes=len(solicitacoes),
+            correcoes_pendentes=correcoes_pendentes,
+            q=q,
+            filtro_status=filtro_status,
+            filtro_setor=filtro_setor,
         )
-
-
 
     @app.route(
         "/admin/membro/<int:usuario_id>/status",
@@ -1226,6 +1327,18 @@ def configurar_rotas(app):
                 synchronize_session=False
             )
 
+            SolicitacaoCorrecao.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
+            Notificacao.query.filter_by(
+                usuario_id=membro.id
+            ).delete(
+                synchronize_session=False
+            )
+
             # Extratos / módulos novos
             ExtratoPonto.query.filter_by(
                 usuario_id=membro.id
@@ -1352,6 +1465,13 @@ def configurar_rotas(app):
             f"Senha da conta {membro.usuario} redefinida.",
         )
 
+        criar_notificacao(
+            membro.id,
+            "Senha redefinida",
+            "Sua senha foi redefinida pela administração.",
+            "aviso",
+        )
+
         try:
             db.session.commit()
         except SQLAlchemyError:
@@ -1451,6 +1571,13 @@ def configurar_rotas(app):
             f"Antes: {anterior}. Depois: {membro.cargo} / {perfil.cargo_acao or '-'}.",
         )
 
+        criar_notificacao(
+            membro.id,
+            "Cargo/Setor atualizado",
+            f"Seu cargo/setor foi atualizado pela administração para {membro.cargo} / {perfil.cargo_acao or '-'}.",
+            "info",
+        )
+
         try:
             db.session.commit()
         except SQLAlchemyError:
@@ -1508,6 +1635,13 @@ def configurar_rotas(app):
             f"ADV aplicada por 14 dias. Motivo: {motivo}",
         )
 
+        criar_notificacao(
+            membro.id,
+            "Advertência recebida",
+            f"Você recebeu uma ADV válida por 14 dias. Motivo: {motivo}",
+            "aviso",
+        )
+
         total_ativas = len(ativas_antes) + 1
 
         if total_ativas >= 2:
@@ -1516,6 +1650,13 @@ def configurar_rotas(app):
                 "PD_OBRIGATORIO",
                 membro.id,
                 "Membro alcançou 2 ADVs ativas. Conta bloqueada aguardando PD.",
+            )
+
+            criar_notificacao(
+                membro.id,
+                "Situação de PD",
+                "Você atingiu 2 ADVs ativas. Sua conta foi bloqueada e marcada para análise de PD.",
+                "erro",
             )
 
         try:
@@ -2199,6 +2340,12 @@ def configurar_rotas_gestao(app):
             meta_lavagem=meta_lavagem,
             posicoes=posicoes,
             atividades=atividades,
+            advertencias_ativas=advertencias_ativas(current_user.id),
+            notificacoes_recentes=Notificacao.query.filter_by(
+                usuario_id=current_user.id
+            ).order_by(
+                Notificacao.criado_em.desc()
+            ).limit(5).all(),
         )
 
     @app.route("/perfil-setores", methods=["GET", "POST"])
@@ -2773,6 +2920,24 @@ def configurar_rotas_gestao(app):
                     return item
             return None
 
+        top3 = [
+            item
+            for item in rankings[categoria]
+            if item["total"] > 0
+        ][:3]
+
+        minha_posicao = None
+        meu_total = 0
+
+        for indice, item in enumerate(
+            rankings[categoria],
+            1,
+        ):
+            if item["usuario_id"] == current_user.id:
+                minha_posicao = indice
+                meu_total = item["total"]
+                break
+
         return render_template(
             "ranking.html",
             ranking=rankings[categoria],
@@ -2787,6 +2952,9 @@ def configurar_rotas_gestao(app):
             top_desmanche=primeiro_com_resultado(
                 rankings["desmanche"]
             ),
+            top3=top3,
+            minha_posicao=minha_posicao,
+            meu_total=meu_total,
         )
 
 
@@ -2840,6 +3008,17 @@ def configurar_rotas_gestao(app):
                 ),
             )
 
+            criar_notificacao(
+                solicitacao.usuario_id,
+                "Alteração de Nome/ID Game",
+                (
+                    "Sua alteração de Nome/ID Game foi aprovada."
+                    if acao == "aprovar"
+                    else "Sua alteração de Nome/ID Game foi recusada."
+                ),
+                "sucesso" if acao == "aprovar" else "aviso",
+            )
+
             db.session.commit()
             flash("Solicitação aprovada." if acao == "aprovar" else "Solicitação recusada.", "sucesso")
         except IntegrityError:
@@ -2851,6 +3030,320 @@ def configurar_rotas_gestao(app):
             flash("Não foi possível concluir a decisão.", "erro")
 
         return redirect(url_for("admin_dashboard"))
+
+
+    @app.route("/notificacoes")
+    @login_required
+    def notificacoes():
+        itens = Notificacao.query.filter_by(
+            usuario_id=current_user.id
+        ).order_by(
+            Notificacao.criado_em.desc()
+        ).limit(100).all()
+
+        return render_template(
+            "notificacoes.html",
+            itens=itens,
+        )
+
+
+    @app.route("/notificacoes/marcar-lidas", methods=["POST"])
+    @login_required
+    def notificacoes_marcar_lidas():
+        Notificacao.query.filter_by(
+            usuario_id=current_user.id,
+            lida=False,
+        ).update(
+            {"lida": True},
+            synchronize_session=False,
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível atualizar as notificações.", "erro")
+            return redirect(url_for("notificacoes"))
+
+        flash("Notificações marcadas como lidas.", "sucesso")
+        return redirect(url_for("notificacoes"))
+
+
+    @app.route("/historico-geral/correcao", methods=["POST"])
+    @login_required
+    def solicitar_correcao_registro():
+        registro_tipo = limpar_texto(
+            request.form.get("registro_tipo"),
+            30,
+        ).lower()
+
+        try:
+            registro_id = int(
+                request.form.get("registro_id")
+                or 0
+            )
+        except (TypeError, ValueError):
+            registro_id = 0
+
+        motivo = limpar_texto(
+            request.form.get("motivo"),
+            1200,
+        )
+
+        if registro_tipo not in {"lavagem", "acao", "desmanche"}:
+            flash("Tipo de registro inválido.", "erro")
+            return redirect(url_for("historico_geral"))
+
+        if registro_id <= 0 or not motivo:
+            flash("Informe o registro e o motivo da correção.", "erro")
+            return redirect(url_for("historico_geral"))
+
+        # O usuário só pode pedir correção de registro próprio.
+        modelo = {
+            "lavagem": Operacao,
+            "acao": Acao,
+            "desmanche": Desmanche,
+        }[registro_tipo]
+
+        registro = modelo.query.filter_by(
+            id=registro_id,
+            usuario_id=current_user.id,
+        ).first()
+
+        if registro is None:
+            flash("Registro não encontrado.", "erro")
+            return redirect(url_for("historico_geral"))
+
+        pendente = SolicitacaoCorrecao.query.filter_by(
+            usuario_id=current_user.id,
+            registro_tipo=registro_tipo,
+            registro_id=registro_id,
+            status="pendente",
+        ).first()
+
+        if pendente:
+            flash("Já existe uma solicitação pendente para este registro.", "aviso")
+            return redirect(url_for("historico_geral"))
+
+        db.session.add(
+            SolicitacaoCorrecao(
+                usuario_id=current_user.id,
+                registro_tipo=registro_tipo,
+                registro_id=registro_id,
+                motivo=motivo,
+                status="pendente",
+            )
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível enviar a solicitação.", "erro")
+            return redirect(url_for("historico_geral"))
+
+        # Avisar ADMs.
+        for admin in Usuario.query.filter_by(is_admin=True, ativo=True).all():
+            criar_notificacao(
+                admin.id,
+                "Nova solicitação de correção",
+                f"{current_user.usuario} solicitou correção de um registro de {registro_tipo}.",
+                "admin",
+            )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+
+        flash("Solicitação de correção enviada ao ADM.", "sucesso")
+        return redirect(url_for("historico_geral"))
+
+
+    @app.route("/admin/correcoes")
+    @login_required
+    @admin_required
+    def admin_correcoes():
+        status = limpar_texto(
+            request.args.get("status", "pendente"),
+            20,
+        )
+        if status not in {"pendente", "aprovada", "recusada", "todos"}:
+            status = "pendente"
+
+        consulta = SolicitacaoCorrecao.query
+
+        if status != "todos":
+            consulta = consulta.filter_by(
+                status=status
+            )
+
+        solicitacoes = consulta.order_by(
+            SolicitacaoCorrecao.solicitado_em.desc()
+        ).limit(200).all()
+
+        linhas = []
+        for sol in solicitacoes:
+            linhas.append({
+                "solicitacao": sol,
+                "usuario": db.session.get(Usuario, sol.usuario_id),
+            })
+
+        return render_template(
+            "admin_correcoes.html",
+            linhas=linhas,
+            status=status,
+        )
+
+
+    @app.route(
+        "/admin/correcoes/<int:solicitacao_id>/<acao>",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_decidir_correcao(solicitacao_id, acao):
+        if acao not in {"aprovar", "recusar"}:
+            flash("Decisão inválida.", "erro")
+            return redirect(url_for("admin_correcoes"))
+
+        sol = db.session.get(
+            SolicitacaoCorrecao,
+            solicitacao_id,
+        )
+
+        if sol is None or sol.status != "pendente":
+            flash("Solicitação não encontrada ou já decidida.", "erro")
+            return redirect(url_for("admin_correcoes"))
+
+        resposta = limpar_texto(
+            request.form.get("resposta_admin"),
+            1200,
+        )
+
+        sol.status = (
+            "aprovada"
+            if acao == "aprovar"
+            else "recusada"
+        )
+        sol.admin_id = current_user.id
+        sol.resposta_admin = resposta
+        sol.decidido_em = datetime.now(timezone.utc)
+
+        criar_notificacao(
+            sol.usuario_id,
+            "Solicitação de correção analisada",
+            (
+                f"Sua solicitação para {sol.registro_tipo} #{sol.registro_id} "
+                f"foi {sol.status}."
+                + (f" Resposta: {resposta}" if resposta else "")
+            ),
+            "sucesso" if acao == "aprovar" else "aviso",
+        )
+
+        registrar_log_admin(
+            "CORRECAO_REGISTRO",
+            sol.usuario_id,
+            f"Solicitação #{sol.id} {sol.status}: {sol.registro_tipo} #{sol.registro_id}.",
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível concluir a decisão.", "erro")
+            return redirect(url_for("admin_correcoes"))
+
+        flash("Solicitação atualizada.", "sucesso")
+        return redirect(url_for("admin_correcoes"))
+
+
+    @app.route("/admin/backup")
+    @login_required
+    @admin_required
+    def admin_backup():
+        """
+        Exporta um snapshot JSON leve dos dados de gestão.
+        Não inclui bytes de prints e não altera o banco.
+        """
+        from flask import make_response
+        from decimal import Decimal as _Decimal
+
+        def serializar(valor):
+            if valor is None:
+                return None
+            if isinstance(valor, datetime):
+                return valor.isoformat()
+            if isinstance(valor, _Decimal):
+                return str(valor)
+            if isinstance(valor, (bytes, bytearray)):
+                return None
+            return valor
+
+        tabelas = [
+            Usuario,
+            PerfilGame,
+            PerfilSetor,
+            Operacao,
+            Acao,
+            Desmanche,
+            ExtratoPonto,
+            AdvertenciaAdmin,
+            SolicitacaoPerfilGame,
+            SolicitacaoCorrecao,
+            Notificacao,
+            LogAdmin,
+        ]
+
+        dados = {
+            "formato": "CHINA_PRO_BACKUP_V1",
+            "gerado_em": datetime.now(timezone.utc).isoformat(),
+            "tabelas": {},
+        }
+
+        for modelo in tabelas:
+            linhas = []
+            for obj in modelo.query.all():
+                linha = {}
+                for coluna in modelo.__table__.columns:
+                    # Não exporta senha nem imagens/binários.
+                    if coluna.name in {
+                        "senha",
+                        "print_envio_dados",
+                        "print_recebimento_dados",
+                    }:
+                        continue
+                    linha[coluna.name] = serializar(
+                        getattr(obj, coluna.name)
+                    )
+                linhas.append(linha)
+
+            dados["tabelas"][modelo.__tablename__] = linhas
+
+        conteudo = json.dumps(
+            dados,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+        resposta = make_response(conteudo)
+        resposta.headers["Content-Type"] = "application/json; charset=utf-8"
+        resposta.headers["Content-Disposition"] = (
+            "attachment; filename=china_pro_backup.json"
+        )
+
+        registrar_log_admin(
+            "GERAR_BACKUP",
+            detalhes="Backup JSON de gestão gerado.",
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+
+        return resposta
+
 
     @app.route("/historico-geral")
     @login_required
@@ -2869,6 +3362,8 @@ def configurar_rotas_gestao(app):
                     continue
                 itens.append({
                     "tipo": "Lavagem",
+                    "tipo_slug": "lavagem",
+                    "registro_id": op.id,
                     "icone": "💰",
                     "titulo": f"{op.nome_jogador} #{op.id_jogador}",
                     "detalhe": f"R$ {float(op.valor):,.2f} • {abs(float(op.porcentagem)):.0f}%",
@@ -2884,6 +3379,8 @@ def configurar_rotas_gestao(app):
                     continue
                 itens.append({
                     "tipo": "Ação",
+                    "tipo_slug": "acao",
+                    "registro_id": item.id,
                     "icone": "🔫",
                     "titulo": f"{item.tipo} — {item.resultado}",
                     "detalhe": f"+{item.pontos} pts • {item.responsavel}",
@@ -2899,6 +3396,8 @@ def configurar_rotas_gestao(app):
                     continue
                 itens.append({
                     "tipo": "Desmanche",
+                    "tipo_slug": "desmanche",
+                    "registro_id": item.id,
                     "icone": "🚗",
                     "titulo": item.modelo,
                     "detalhe": f"R$ {float(item.quantidade):,.2f} • +{item.pontos} {item.destino_pontos}",

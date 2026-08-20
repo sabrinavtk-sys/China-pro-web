@@ -1,0 +1,19 @@
+CHINA PRO — ATUALIZAÇÃO
+
+Incluído:
+- Central de Notificações.
+- Avisos para ADV, cargo/setor, senha e alteração de Nome/ID Game.
+- Gestão com situação de ADV e avisos recentes.
+- Ranking com Top 3 e posição do usuário.
+- Painel ADM com pesquisa e filtros por status/setor/ADV/PD.
+- Solicitação de correção de registros via Histórico Geral.
+- Painel ADM para aprovar/recusar solicitações de correção.
+- Validação preventiva de resolução/qualidade dos prints antes do OCR.
+- Backup JSON administrativo sem senhas e sem bytes de prints.
+- Melhorias responsivas para celular/notebook.
+- Fuso da data de lavagem padronizado com o fuso configurado do sistema.
+- Limpeza de notificações/correções ao executar PD.
+
+Observação de segurança:
+O backup JSON é uma cópia administrativa de dados para auditoria/recuperação assistida.
+A restauração automática destrutiva não foi habilitada para evitar sobrescrever o banco por engano.

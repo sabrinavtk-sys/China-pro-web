@@ -9,6 +9,28 @@
 <article class="card ranking-top"><span class="ranking-medal">🥇</span><small>{{ rotulo }}</small>{% if item %}<strong>{{ item.nome_game or item.usuario_site }}</strong><span class="game-id">ID #{{ item.id_game or '—' }}</span><b>{% if item.total > 0 %}{{ item.total }} {{ unidade }}{% else %}0 {{ unidade }}{% endif %}</b>{% else %}<strong>—</strong><b>Sem registros</b>{% endif %}</article>
 {% endfor %}
 </section>
+
+<section class="card ranking-podium-section">
+  <div class="section-title"><div><h2>🏅 Top 3 — {{ categoria|capitalize }}</h2><small class="muted">Destaques do período selecionado</small></div></div>
+  <div class="podium-grid">
+    {% for item in top3 %}
+      <article class="podium-card place-{{ loop.index }}">
+        <span class="podium-medal">{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% else %}🥉{% endif %}</span>
+        <strong>{{ item.nome_game or item.usuario_site }}</strong>
+        <small>ID #{{ item.id_game or '—' }}</small>
+        <b>{{ item.total }} {{ 'pontos' if categoria=='acao' else 'registros' }}</b>
+      </article>
+    {% else %}
+      <div class="empty-state">Ainda não há registros suficientes para o Top 3.</div>
+    {% endfor %}
+  </div>
+  {% if minha_posicao %}
+  <div class="my-ranking-position">
+    <span>Sua posição</span><strong>{{ minha_posicao }}º</strong><small>{{ meu_total }} {{ 'pontos' if categoria=='acao' else 'registros' }}</small>
+  </div>
+  {% endif %}
+</section>
+
 <section class="card standard-section"><div class="section-title ranking-title-row"><div><h2>Ranking completo</h2><small class="muted">Do maior para o menor</small></div><div class="filters category-tabs"><a class="btn {% if categoria!='lavagem' %}secondary{% endif %}" href="?categoria=lavagem&periodo={{ periodo }}">💰 Lavagem</a><a class="btn {% if categoria!='acao' %}secondary{% endif %}" href="?categoria=acao&periodo={{ periodo }}">🔫 Ação</a><a class="btn {% if categoria!='desmanche' %}secondary{% endif %}" href="?categoria=desmanche&periodo={{ periodo }}">🚗 Desmanche</a></div></div>
-<div class="table-wrap"><table class="table ranking-table"><thead><tr><th>Posição</th><th>ID Game</th><th>Nome no Game</th><th>Usuário do Site</th><th>Cargo</th><th>{{ 'Pontos' if categoria=='acao' else 'Quantidade' }}</th></tr></thead><tbody>{% for item in ranking %}<tr class="{% if loop.index==1 %}rank-first{% endif %}"><td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}º{% endif %}</td><td><b>#{{ item.id_game or '—' }}</b></td><td><b>{{ item.nome_game or 'Não configurado' }}</b></td><td>{{ item.usuario_site }}</td><td>{{ item.cargo }}</td><td class="gold"><b>{{ item.total }}</b></td></tr>{% else %}<tr><td colspan="6"><div class="empty-state">Nenhum usuário encontrado.</div></td></tr>{% endfor %}</tbody></table></div></section>
+<div class="table-wrap"><table class="table ranking-table"><thead><tr><th>Posição</th><th>ID Game</th><th>Nome no Game</th><th>Usuário do Site</th><th>Cargo</th><th>{{ 'Pontos' if categoria=='acao' else 'Quantidade' }}</th></tr></thead><tbody>{% for item in ranking %}<tr class="{% if loop.index==1 %}rank-first{% endif %} {% if item.usuario_id==current_user.id %}rank-me{% endif %}"><td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}º{% endif %}</td><td><b>#{{ item.id_game or '—' }}</b></td><td><b>{{ item.nome_game or 'Não configurado' }}</b></td><td>{{ item.usuario_site }}</td><td>{{ item.cargo }}</td><td class="gold"><b>{{ item.total }}</b></td></tr>{% else %}<tr><td colspan="6"><div class="empty-state">Nenhum usuário encontrado.</div></td></tr>{% endfor %}</tbody></table></div></section>
 {% endblock %}

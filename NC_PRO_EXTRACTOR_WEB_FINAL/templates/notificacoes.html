@@ -1,0 +1,21 @@
+{% extends "base_gestao.html" %}
+{% block title %}Notificações — China PRO{% endblock %}
+{% block page_heading %}Notificações{% endblock %}
+{% block content %}
+<section class="page-intro">
+  <div><span class="kicker">CENTRAL DE AVISOS</span><h2>🔔 Suas notificações</h2><p class="muted">Alterações de perfil, ADV, cargo, senha e decisões administrativas.</p></div>
+  {% if itens %}<form method="POST" action="{{ url_for('notificacoes_marcar_lidas') }}"><button class="btn secondary">Marcar todas como lidas</button></form>{% endif %}
+</section>
+<section class="card">
+  <div class="notification-list">
+    {% for item in itens %}
+      <article class="notification-item {% if not item.lida %}unread{% endif %}">
+        <div class="notification-dot"></div>
+        <div><div class="row"><b>{{ item.titulo }}</b><span class="pill">{{ item.criado_em.astimezone().strftime('%d/%m/%Y %H:%M') }}</span></div><p>{{ item.mensagem }}</p></div>
+      </article>
+    {% else %}
+      <div class="empty-state">Você ainda não possui notificações.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

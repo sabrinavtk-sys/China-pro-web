@@ -1,0 +1,44 @@
+{% extends "base_gestao.html" %}
+{% block title %}Correções — China PRO{% endblock %}
+{% block page_heading %}Solicitações de Correção{% endblock %}
+{% block content %}
+<section class="page-intro">
+  <div><span class="kicker">ADMINISTRAÇÃO</span><h2>📝 Correções de registros</h2><p class="muted">Analise solicitações sem alterar o histórico silenciosamente.</p></div>
+  <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">← Administração</a>
+</section>
+<div class="filters ranking-period">
+  {% for valor,rotulo in [('pendente','Pendentes'),('aprovada','Aprovadas'),('recusada','Recusadas'),('todos','Todas')] %}
+  <a class="btn {% if status!=valor %}secondary{% endif %}" href="?status={{ valor }}">{{ rotulo }}</a>
+  {% endfor %}
+</div>
+<section class="card">
+<div class="request-list">
+{% for item in linhas %}
+  <article class="correction-card">
+    <div>
+      <div class="row"><b>{{ item.usuario.usuario if item.usuario else 'Usuário removido' }}</b><span class="pill">{{ item.solicitacao.status }}</span></div>
+      <p><b>{{ item.solicitacao.registro_tipo|capitalize }} #{{ item.solicitacao.registro_id }}</b></p>
+      <p>{{ item.solicitacao.motivo }}</p>
+      <small class="muted">{{ item.solicitacao.solicitado_em.astimezone().strftime('%d/%m/%Y %H:%M') }}</small>
+    </div>
+    {% if item.solicitacao.status == 'pendente' %}
+    <div class="correction-actions">
+      <form method="POST" action="{{ url_for('admin_decidir_correcao', solicitacao_id=item.solicitacao.id, acao='aprovar') }}">
+        <input name="resposta_admin" placeholder="Resposta/opcional">
+        <button class="admin-btn success">✓ Aprovar</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin_decidir_correcao', solicitacao_id=item.solicitacao.id, acao='recusar') }}">
+        <input name="resposta_admin" placeholder="Motivo da recusa">
+        <button class="admin-btn danger">✕ Recusar</button>
+      </form>
+    </div>
+    {% elif item.solicitacao.resposta_admin %}
+      <div class="notice">{{ item.solicitacao.resposta_admin }}</div>
+    {% endif %}
+  </article>
+{% else %}
+  <div class="empty-state">Nenhuma solicitação nesta categoria.</div>
+{% endfor %}
+</div>
+</section>
+{% endblock %}

@@ -830,3 +830,44 @@ class AdvertenciaAdmin(db.Model):
         db.DateTime(timezone=True),
         nullable=True,
     )
+
+
+class Notificacao(db.Model):
+    __tablename__ = "notificacoes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tipo = db.Column(db.String(40), nullable=False, default="info", index=True)
+    titulo = db.Column(db.String(160), nullable=False)
+    mensagem = db.Column(db.String(1200), nullable=False)
+    lida = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc, index=True)
+
+
+class SolicitacaoCorrecao(db.Model):
+    __tablename__ = "solicitacoes_correcao"
+
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    registro_tipo = db.Column(db.String(30), nullable=False, index=True)
+    registro_id = db.Column(db.Integer, nullable=False, index=True)
+    motivo = db.Column(db.String(1200), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="pendente", index=True)
+    admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    resposta_admin = db.Column(db.String(1200), nullable=True)
+    solicitado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc, index=True)
+    decidido_em = db.Column(db.DateTime(timezone=True), nullable=True)

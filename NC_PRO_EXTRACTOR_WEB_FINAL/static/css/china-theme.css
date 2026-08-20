@@ -75,3 +75,22 @@ body:not(.china-login-v2):not(.china-register){background:radial-gradient(circle
 .china-quick,.quick-card{background:linear-gradient(155deg,#121116,#0a0a0d)!important;border:1px solid #2c2028!important}.china-quick:hover,.quick-card:hover{border-color:#7a2949!important;box-shadow:0 12px 30px rgba(255,47,121,.07)!important}
 .topbar,.top{background:rgba(8,8,11,.72)!important;border-bottom:1px solid #241a21!important;backdrop-filter:blur(10px)!important}
 .china-profile-img,.usuario-avatar{box-shadow:0 0 22px rgba(255,47,121,.14)!important}
+
+
+/* OCR — validação preventiva de qualidade */
+.print-quality-box{
+  max-width:100%;
+  margin:14px 0;
+  padding:13px 15px;
+  border:1px solid rgba(238,37,109,.18);
+  border-radius:11px;
+  background:rgba(12,11,15,.94);
+  color:#ddd5da;
+}
+.print-quality-box b{color:#fff}
+.print-quality-box p{margin:5px 0 8px;color:#9f959c;font-size:11px;line-height:1.45}
+.print-quality-status{
+  padding:9px 10px;border-radius:8px;background:#111015;color:#aaa0a7;font-size:11px
+}
+.print-quality-status.good{color:#78dfba;border:1px solid rgba(65,210,154,.24)}
+.print-quality-status.bad{color:#ff9caf;border:1px solid rgba(255,85,115,.28)}

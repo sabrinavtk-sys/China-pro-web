@@ -7,7 +7,7 @@
   <title>{% block title %}China PRO{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/gestao.css') }}?v=20260818b">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/china-theme.css') }}?v=20260818b">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-standard.css') }}?v=20260819-sidebar">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-standard.css') }}?v=20260820-update1">
 </head>
 <body class="china-app">
 <div class="shell">
@@ -25,12 +25,13 @@
       <a class="{% if request.endpoint=='acoes' %}active{% endif %}" href="{{ url_for('acoes') }}">🔫 <span>Ações</span></a>
       <a class="{% if request.endpoint=='desmanches' %}active{% endif %}" href="{{ url_for('desmanches') }}">🚗 <span>Desmanches</span></a>
       <a class="{% if request.endpoint=='ranking' %}active{% endif %}" href="{{ url_for('ranking') }}">🏆 <span>Ranking</span></a>
+      <a class="{% if request.endpoint=='notificacoes' %}active{% endif %}" href="{{ url_for('notificacoes') }}">🔔 <span>Notificações{% if notificacoes_nao_lidas %} ({{ notificacoes_nao_lidas }}){% endif %}</span></a>
       <a class="{% if request.endpoint=='perfil_setores' %}active{% endif %}" href="{{ url_for('perfil_setores') }}">♛ <span>Metas e Cargos</span></a>
       <a class="{% if request.endpoint=='historico_geral' %}active{% endif %}" href="{{ url_for('historico_geral') }}">▣ <span>Histórico Geral</span></a>
       <a class="{% if request.endpoint=='gestao' %}active{% endif %}" href="{{ url_for('gestao') }}">◫ <span>Visão Geral</span></a>
       <a class="{% if request.endpoint=='configuracoes' %}active{% endif %}" href="{{ url_for('configuracoes') }}">⚙ <span>Configurações</span></a>
       {% if current_user.is_admin %}
-      <a class="{% if request.endpoint in ['admin_dashboard','admin_membro'] %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">🛡 <span>Administração</span></a>
+      <a class="{% if request.endpoint in ['admin_dashboard','admin_membro','admin_logs','admin_correcoes'] %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">🛡 <span>Administração</span></a>
       {% endif %}
       <a href="{{ url_for('logout') }}">↪ <span>Sair</span></a>
     </nav>
@@ -43,6 +44,9 @@
         <h1>{% block page_heading %}Sistema de Gestão{% endblock %}</h1>
       </div>
       <div class="app-profile">
+        <a class="notif-bell" href="{{ url_for('notificacoes') }}" aria-label="Notificações">
+          🔔{% if notificacoes_nao_lidas %}<span>{{ notificacoes_nao_lidas }}</span>{% endif %}
+        </a>
         <img class="china-profile-img" src="{{ url_for('static', filename='img/china-logo-user-web.jpg') }}" alt="China">
         <div>
           <b>{{ current_user.usuario }}</b>
