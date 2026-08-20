@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    console.log("OCR.JS v57 CARREGADO");
+    console.log("OCR.JS v58 CARREGADO");
 
     // =========================================================
     // ESTADO PRIVADO
@@ -16,6 +16,47 @@
     ];
 
     const RECORTES_RECEBIMENTO = [
+        /*
+            PRIORIDADE MÁXIMA:
+            notificação azul do canto superior esquerdo.
+            Exemplo real:
+            "Você recebeu o item x829316 DINHEIRO SUJO
+             de Davi Knecht [145156]"
+
+            O recorte pequeno evita que personagens, HUD, veículos
+            e o balão inferior confundam o Tesseract.
+        */
+        {
+            nome: "NOTIFICAÇÃO RECEBIMENTO RAW",
+            x: 0.006,
+            y: 0.105,
+            largura: 0.31,
+            altura: 0.115,
+            escala: 5.2,
+            filtro: "nenhum",
+            psm: "6"
+        },
+        {
+            nome: "NOTIFICAÇÃO RECEBIMENTO CINZA",
+            x: 0.006,
+            y: 0.105,
+            largura: 0.31,
+            altura: 0.115,
+            escala: 5.2,
+            filtro: "cinza",
+            psm: "6"
+        },
+        {
+            nome: "NOTIFICAÇÃO RECEBIMENTO BINÁRIO",
+            x: 0.006,
+            y: 0.105,
+            largura: 0.31,
+            altura: 0.115,
+            escala: 5.2,
+            filtro: "binario",
+            limiar: 145,
+            psm: "6"
+        },
         {
             nome: "BALÃO AMPLO COLORIDO",
             x: 0.00,
@@ -1029,6 +1070,18 @@
                 confiancaTesseract / 5
             );
 
+        /*
+            Uma frase explícita "Você recebeu..." é mais confiável
+            que um número solto do HUD/balão inferior.
+        */
+        if (
+            /voce\s+receb|recebeu\s+(?:o\s+)?item/.test(
+                normalizado
+            )
+        ) {
+            pontos += 65;
+        }
+
         if (
             /dinheiro|d[il1]nheiro|di\s*nhei\s*ro/.test(
                 normalizado
@@ -1514,7 +1567,7 @@
             );
 
             console.log(
-                "INICIANDO PROCESSAMENTO OCR v57"
+                "INICIANDO PROCESSAMENTO OCR v58"
             );
 
             console.log(
@@ -1553,16 +1606,82 @@
                 );
 
             /*
-                A data/hora correta vem do SEGUNDO PRINT,
-                que representa a conclusão da operação.
+                DATA/HORA FINAL:
+                lê o rodapé dos DOIS prints e escolhe a data/hora
+                cronologicamente mais recente.
+
+                Isso evita depender da ordem em que o usuário colocou
+                os prints. No caso real:
+                  recebido -> 17/08/2026 17:59
+                  enviado  -> 17/08/2026 18:00
+                Resultado final correto -> 18:00.
             */
-            const leituraRodape =
+            const leituraRodapeEnvio =
+                await lerRodapeDataHora(
+                    arquivoEnvio
+                );
+
+            const leituraRodapeRecebimento =
                 await lerRodapeDataHora(
                     arquivoRecebimento
                 );
 
+            function converterDataOCRParaTimestamp(
+                valor
+            ){
+                const busca =
+                    String(valor || "").match(
+                        /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/
+                    );
+
+                if(!busca){
+                    return 0;
+                }
+
+                return Date.UTC(
+                    Number(busca[3]),
+                    Number(busca[2]) - 1,
+                    Number(busca[1]),
+                    Number(busca[4]),
+                    Number(busca[5])
+                );
+            }
+
+            const candidatosDataHora = [
+                leituraRodapeEnvio,
+                leituraRodapeRecebimento
+            ].filter(
+                leitura =>
+                    leitura &&
+                    leitura.data &&
+                    leitura.data !== "---"
+            );
+
+            candidatosDataHora.sort(
+                (a,b) =>
+                    converterDataOCRParaTimestamp(b.data) -
+                    converterDataOCRParaTimestamp(a.data)
+            );
+
+            const leituraRodape =
+                candidatosDataHora[0] || {
+                    data: "---",
+                    texto: "",
+                    leitura: "não identificada"
+                };
+
             console.log(
-                "DATA/HORA DO PRINT FINAL:",
+                "DATA/HORA PRINT ENVIO:",
+                leituraRodapeEnvio
+            );
+
+            console.log(
+                "DATA/HORA PRINT RECEBIMENTO:",
+                leituraRodapeRecebimento
+            );
+
+            console.log(
+                "DATA/HORA FINAL ESCOLHIDA:",
                 leituraRodape
             );
 
@@ -1855,6 +1974,6 @@
         limparProcessamentoAnterior;
 
     console.log(
-        "OCR.JS v57 PRONTO"
+        "OCR.JS v58 PRONTO"
     );
 })();

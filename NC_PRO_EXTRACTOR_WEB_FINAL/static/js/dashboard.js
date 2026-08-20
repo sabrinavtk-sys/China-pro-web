@@ -1768,6 +1768,9 @@ function limparDadosOperacao(){
         idJogador:
             "---",
 
+        dataOperacao:
+            "---",
+
         valorRecebido:
             "R$ 0",
 

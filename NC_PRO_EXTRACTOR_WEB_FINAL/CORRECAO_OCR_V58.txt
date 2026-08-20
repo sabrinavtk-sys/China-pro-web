@@ -1,0 +1,33 @@
+CHINA PRO — OCR/PARSER v58
+
+Correções feitas com base no caso real enviado:
+
+Print de recebimento:
+- Valor original: R$ 829.316
+- Jogador: Davi Knecht
+- ID: 145156
+- Horário visível: 17/08/2026 17:59
+
+Print de envio:
+- Valor enviado: R$ 621.987
+- Jogador: Davi Knecht
+- ID: 145156
+- Horário visível: 17/08/2026 18:00
+
+Resultado esperado:
+- Valor processado/original: R$ 829.316
+- Valor enviado: R$ 621.987
+- Taxa: 25%
+- Ganho: R$ 207.329
+- Nome: Davi Knecht
+- ID: 145156
+- Data/hora final: 17/08/2026 18:00
+
+Mudanças:
+- OCR possui recortes dedicados para a notificação azul do canto superior esquerdo.
+- A frase "Você recebeu o item x..." recebe prioridade máxima.
+- Parser ganhou regra explícita de recebimento.
+- Leitura de Nome/ID aceita pequenas trocas de símbolo feitas pelo OCR.
+- Data/hora é lida nos DOIS prints e a mais recente é usada como final.
+- A data antiga é limpa antes de cada novo processamento para impedir resultado residual.
+- Valores incompatíveis continuam bloqueados; nenhum cálculo antigo é reaproveitado.

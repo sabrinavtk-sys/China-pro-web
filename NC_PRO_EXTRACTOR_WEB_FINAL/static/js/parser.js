@@ -1,4 +1,4 @@
-console.log("PARSER.JS v57 CARREGADO");
+console.log("PARSER.JS v58 CARREGADO");
 
 
 // =========================================================
@@ -615,6 +615,51 @@ function extrairCandidatosBalao(texto){
 
 
     let correspondencia;
+
+
+    /*
+        REGRA 0 — NOTIFICAÇÃO EXPLÍCITA DE RECEBIMENTO
+        Maior prioridade do parser.
+
+        Casos reais:
+        "Você recebeu o item x829316 DINHEIRO SUJO de Davi Knecht [145156]"
+        "Voce recebeu item x829316 DINHEIRO SUJO ..."
+    */
+    const regexRecebimentoExplicito =
+    /(?:voce\s+)?receb\w*\s+(?:o\s+)?(?:item|ltem|tem)\s*[xX×«]?\s*([\d\s.,oOiIlL|sSbB]{4,24}?)(?=\s*(?:DINHEIRO|D[Il1]NHEIRO|SUJO|SUKO|SULO|de\b))/gi;
+
+
+    while(
+        (
+            correspondencia =
+            regexRecebimentoExplicito.exec(
+                textoLimpo
+            )
+        ) !== null
+    ){
+        const contexto =
+            extrairContexto(
+                textoLimpo,
+                correspondencia.index,
+                35,
+                180
+            );
+
+        adicionarCandidato(
+            candidatos,
+            criarCandidatoBalao({
+                valorBruto:
+                    correspondencia[1],
+                origem:
+                    "notificação explícita de recebimento",
+                prioridade:
+                    180,
+                contexto,
+                indice:
+                    correspondencia.index
+            })
+        );
+    }
 
 
     /*
@@ -1414,7 +1459,7 @@ function pegarJogador(
 
     const buscaEnvio =
     envio.match(
-        /(?:para|pra)\s+([A-Za-zÀ-ÿ0-9'._-]+(?:\s+[A-Za-zÀ-ÿ0-9'._-]+){0,4})\s*(?:#|\[|\()\s*(\d{3,8})\s*[\]\)]?/i
+        /(?:para|pra)\s+([A-Za-zÀ-ÿ0-9'._-]+(?:\s+[A-Za-zÀ-ÿ0-9'._-]+){0,4}?)\s*(?:#|£|§|\[|\()?\s*(\d{3,8})\s*[\].),;:]?/i
     );
 
 
@@ -1443,6 +1488,36 @@ function pegarJogador(
 
         }
 
+    }
+
+
+    /*
+        FALLBACK DA TRANSAÇÃO:
+        alguns OCRs trocam [ ] / # por £, § ou removem o símbolo.
+        Limitamos a busca ao trecho após "de" / "para" para não
+        confundir com o ID do HUD.
+    */
+    const textoTransacao =
+        balao + " " + envio;
+
+    const fallback =
+        textoTransacao.match(
+            /(?:dinheiro\s+sujo\s+de|sujo\s+de|(?:para|pra))\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9'._-]*(?:\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9'._-]*){0,3})\s*(?:#|£|§|\[|\()?\s*(\d{3,8})\b/i
+        );
+
+    if(fallback){
+        const nome =
+            limparNomeJogador(
+                fallback[1]
+            );
+
+        if(nomeJogadorValido(nome)){
+            return {
+                nome,
+                idJogador:
+                    fallback[2]
+            };
+        }
     }
 
 
@@ -1507,7 +1582,7 @@ function parseOCR(
 
 
     console.log(
-        "PARSER v57 RECEBEU OCR"
+        "PARSER v58 RECEBEU OCR"
     );
 
 
@@ -1648,6 +1723,34 @@ function testarParserV42(){
 
         {
             nome:
+            "Caso real Davi Knecht",
+
+            envio:
+            "Sucesso Você enviou R$621987 para Davi Knecht #145156.",
+
+            balao:
+            "Informação Você recebeu o item x829316 DINHEIRO SUJO de Davi Knecht [145156]",
+
+            esperado:
+            829316
+        },
+
+        {
+            nome:
+            "Caso real Davi Knecht símbolo OCR",
+
+            envio:
+            "E Você enviou R$621987 pera Davi Knecht £ 145156. x",
+
+            balao:
+            "Você recebeu o item x829316 DINHEIRO SUJO de Davi Knecht [145156]",
+
+            esperado:
+            829316
+        },
+
+        {
+            nome:
             "Ignorar anúncio",
 
             envio:
@@ -1725,5 +1828,5 @@ testarParserV42;
 
 
 console.log(
-    "PARSER.JS v57 PRONTO"
+    "PARSER.JS v58 PRONTO"
 );
