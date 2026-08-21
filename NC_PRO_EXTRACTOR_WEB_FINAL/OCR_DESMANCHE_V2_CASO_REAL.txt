@@ -1,0 +1,14 @@
+CHINA PRO — OCR DESMANCHE v2
+
+Calibrado com print real do Nova Capital.
+
+Leituras:
+1. Valor: exclusivamente no balão verde superior esquerdo.
+   Exemplo testado: "Você recebeu R$60000 de amstel Hazard #830." -> 60000
+
+2. Modelo: texto imediatamente acima da palavra "Veículo".
+   Exemplo testado: "Huracan STO" / "Veículo" -> Huracan STO
+
+3. Data/hora: rodapé do print.
+
+O OCR usa recortes específicos da tela para evitar dinheiro do HUD, nomes de jogadores e outros veículos.

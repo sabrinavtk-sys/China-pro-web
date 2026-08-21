@@ -780,3 +780,7 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
   .correction-actions form{grid-template-columns:1fr}
   .app-topbar{gap:9px!important}
 }
+
+.desmanche-ocr-panel{margin-top:12px;padding:12px 14px;border:1px solid rgba(239,46,112,.24);border-radius:10px;background:rgba(239,46,112,.045);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.desmanche-ocr-panel>div{display:grid;gap:4px}.desmanche-ocr-panel small{color:#a79ca4;line-height:1.4}
+@media(max-width:700px){.desmanche-ocr-panel{align-items:stretch;flex-direction:column}.desmanche-ocr-panel button{width:100%}}

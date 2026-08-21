@@ -1,0 +1,7 @@
+CHINA PRO — OCR DESMANCHE V1
+- Lê automaticamente o print obrigatório.
+- Tenta preencher Modelo do veículo, Valor recebido e Data/Hora.
+- Inicia ao selecionar o print e também possui botão 'Ler print'.
+- Mantém preenchimento manual como fallback.
+- O usuário deve conferir os dados antes de salvar.
+- Próxima calibração ideal: usar prints reais do desmanche do servidor.

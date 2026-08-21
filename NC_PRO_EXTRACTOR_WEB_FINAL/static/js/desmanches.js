@@ -36,6 +36,31 @@ async function lerRespostaAPI(resposta){
 document.addEventListener("DOMContentLoaded", () => {
   const data = document.querySelector("#dataDesmanche");
   const form = document.querySelector("#formDesmanche");
+  const arquivoOCR = document.querySelector("#provaDesmanche");
+  const botaoOCR = document.querySelector("#btnOcrDesmanche");
+  const infoOCR = document.querySelector("#ocrDesmancheInfo");
+
+  async function processarOCRDesmanche(){
+    const file=arquivoOCR?.files?.[0];
+    if(!file){if(infoOCR)infoOCR.textContent="Selecione o print primeiro.";return;}
+    if(botaoOCR)botaoOCR.disabled=true;
+    try{
+      const r=await window.DesmancheOCR.ler(file,p=>{if(infoOCR)infoOCR.textContent=`Lendo print... ${p}%`;});
+      const modelo=document.querySelector("#modelo");
+      const quantidade=document.querySelector("#quantidade");
+      if(r.modelo&&modelo)modelo.value=r.modelo;
+      if(r.quantidade&&quantidade)quantidade.value=r.quantidade;
+      if(r.data_hora&&data)data.value=r.data_hora;
+      const achados=[r.modelo&&"modelo",r.quantidade&&"valor",r.data_hora&&"data/hora"].filter(Boolean);
+      if(infoOCR)infoOCR.textContent=achados.length?`✅ OCR concluído (${r.confianca}%): ${achados.join(", ")}. Confira antes de salvar.`:"⚠️ Não consegui identificar os campos. Preencha manualmente.";
+      console.log("OCR DESMANCHE:",r);
+    }catch(err){
+      console.error("ERRO OCR DESMANCHE:",err);
+      if(infoOCR)infoOCR.textContent=`❌ ${err.message||"Falha ao ler o print."}`;
+    }finally{if(botaoOCR)botaoOCR.disabled=false;}
+  }
+  botaoOCR?.addEventListener("click",processarOCRDesmanche);
+  arquivoOCR?.addEventListener("change",processarOCRDesmanche);
 
   if(data && !data.value){
     data.value = agoraLocalInput();
