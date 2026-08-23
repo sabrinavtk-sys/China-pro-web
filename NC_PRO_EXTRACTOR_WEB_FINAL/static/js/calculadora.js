@@ -5,13 +5,10 @@ const MIN_PERCENT = 20;
 const MAX_PERCENT = 40;
 
 function limparNumero(valor){
-  const somenteDigitos =
-    String(valor || "")
-      .replace(/[^\d]/g, "");
+  const somenteDigitos = String(valor || "")
+    .replace(/[^\d]/g, "");
 
-  return Number(
-    somenteDigitos || 0
-  );
+  return Number(somenteDigitos || 0);
 }
 
 function formatarBRL(valor){
@@ -27,256 +24,241 @@ function formatarBRL(valor){
 }
 
 function formatarCampo(valor){
-  const numero =
-    limparNumero(valor);
-
-  if(!numero){
-    return "";
-  }
-
-  return numero.toLocaleString(
-    "pt-BR"
-  );
+  const numero = limparNumero(valor);
+  return numero ? numero.toLocaleString("pt-BR") : "";
 }
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+function numeroPuro(valor){
+  const numero = Number(valor || 0);
 
-    const valorInput =
-      document.getElementById(
-        "calcValor"
-      );
+  if(Number.isInteger(numero)){
+    return String(numero);
+  }
 
-    const percentualInput =
-      document.getElementById(
-        "calcPorcentagem"
-      );
+  return numero
+    .toFixed(2)
+    .replace(".", ",");
+}
 
-    const percentualTexto =
-      document.getElementById(
-        "calcPorcentagemTexto"
-      );
+async function copiarTexto(texto){
+  if(navigator.clipboard?.writeText){
+    await navigator.clipboard.writeText(texto);
+    return;
+  }
 
-    const enviar =
-      document.getElementById(
-        "calcEnviar"
-      );
+  const area = document.createElement("textarea");
+  area.value = texto;
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand("copy");
+  area.remove();
+}
 
-    const ganho =
-      document.getElementById(
-        "calcGanho"
-      );
+function iniciarCalculadora(container){
+  if(!container || container.dataset.calcReady === "1"){
+    return;
+  }
 
-    const original =
-      document.getElementById(
-        "calcOriginal"
-      );
+  container.dataset.calcReady = "1";
 
-    const taxa =
-      document.getElementById(
-        "calcTaxa"
-      );
+  const valorInput = container.querySelector("[data-calc-valor]");
+  const percentualInput = container.querySelector("[data-calc-percent]");
+  const percentualTexto = container.querySelector("[data-calc-percent-text]");
+  const enviar = container.querySelector("[data-calc-enviar]");
+  const ganho = container.querySelector("[data-calc-ganho]");
+  const original = container.querySelector("[data-calc-original]");
+  const taxa = container.querySelector("[data-calc-taxa]");
+  const copiarNumero = container.querySelector("[data-calc-copy-number]");
+  const copiarCompleto = container.querySelector("[data-calc-copy-full]");
+  const limpar = container.querySelector("[data-calc-clear]");
+  const status = container.querySelector("[data-calc-status]");
+  const presets = container.querySelectorAll("[data-percentual]");
 
-    const copiar =
-      document.getElementById(
-        "calcCopiar"
-      );
+  function percentualSeguro(){
+    let valor = Number(percentualInput?.value || 25);
 
-    const limpar =
-      document.getElementById(
-        "calcLimpar"
-      );
+    valor = Math.max(
+      MIN_PERCENT,
+      Math.min(MAX_PERCENT, valor)
+    );
 
-    const status =
-      document.getElementById(
-        "calcStatus"
-      );
-
-    const presets =
-      document.querySelectorAll(
-        "[data-percentual]"
-      );
-
-    function percentualSeguro(){
-      let valor =
-        Number(
-          percentualInput.value
-          || 25
-        );
-
-      if(valor < MIN_PERCENT){
-        valor = MIN_PERCENT;
-      }
-
-      if(valor > MAX_PERCENT){
-        valor = MAX_PERCENT;
-      }
-
-      percentualInput.value =
-        String(valor);
-
-      return valor;
+    if(percentualInput){
+      percentualInput.value = String(valor);
     }
 
-    function atualizarPreset(
-      percentual
-    ){
-      presets.forEach(
-        botao => {
-          botao.classList.toggle(
-            "active",
-            Number(
-              botao.dataset.percentual
-            )
-            === percentual
-          );
-        }
+    return valor;
+  }
+
+  function atualizarPreset(percentual){
+    presets.forEach(botao => {
+      botao.classList.toggle(
+        "active",
+        Number(botao.dataset.percentual) === percentual
       );
+    });
+  }
+
+  function calcular(){
+    const valor = limparNumero(valorInput?.value);
+    const percentual = percentualSeguro();
+
+    const valorGanho = valor * percentual / 100;
+    const valorEnviar = valor - valorGanho;
+
+    if(percentualTexto){
+      percentualTexto.textContent = `${percentual}%`;
     }
 
-    function calcular(){
-      const valor =
-        limparNumero(
-          valorInput.value
-        );
-
-      const percentual =
-        percentualSeguro();
-
-      const valorGanho =
-        valor
-        * percentual
-        / 100;
-
-      const valorEnviar =
-        valor
-        - valorGanho;
-
-      percentualTexto.textContent =
-        `${percentual}%`;
-
-      taxa.textContent =
-        `${percentual}%`;
-
-      original.textContent =
-        formatarBRL(
-          valor
-        );
-
-      ganho.textContent =
-        formatarBRL(
-          valorGanho
-        );
-
-      enviar.textContent =
-        formatarBRL(
-          valorEnviar
-        );
-
-      atualizarPreset(
-        percentual
-      );
-
-      return {
-        valor,
-        percentual,
-        valorGanho,
-        valorEnviar
-      };
+    if(taxa){
+      taxa.textContent = `${percentual}%`;
     }
 
-    valorInput?.addEventListener(
-      "input",
-      () => {
-        const pos =
-          valorInput.selectionStart;
+    if(original){
+      original.textContent = formatarBRL(valor);
+    }
 
-        valorInput.value =
-          formatarCampo(
-            valorInput.value
-          );
+    if(ganho){
+      ganho.textContent = formatarBRL(valorGanho);
+    }
 
-        try{
-          valorInput.setSelectionRange(
-            valorInput.value.length,
-            valorInput.value.length
-          );
-        }catch{}
+    if(enviar){
+      enviar.textContent = formatarBRL(valorEnviar);
+    }
 
-        calcular();
-      }
-    );
+    atualizarPreset(percentual);
 
-    percentualInput?.addEventListener(
-      "input",
-      calcular
-    );
+    return {
+      valor,
+      percentual,
+      valorGanho,
+      valorEnviar
+    };
+  }
 
-    presets.forEach(
-      botao => {
-        botao.addEventListener(
-          "click",
-          () => {
-            percentualInput.value =
-              botao.dataset.percentual;
+  valorInput?.addEventListener("input", () => {
+    valorInput.value = formatarCampo(valorInput.value);
 
-            calcular();
-          }
-        );
-      }
-    );
+    try{
+      valorInput.setSelectionRange(
+        valorInput.value.length,
+        valorInput.value.length
+      );
+    }catch{}
 
-    limpar?.addEventListener(
-      "click",
-      () => {
-        valorInput.value = "";
-        percentualInput.value = "25";
-        status.textContent = "";
-        calcular();
-        valorInput.focus();
-      }
-    );
-
-    copiar?.addEventListener(
-      "click",
-      async () => {
-        const resultado =
-          calcular();
-
-        if(
-          !resultado.valor
-        ){
-          status.textContent =
-            "⚠️ Informe um valor antes de copiar.";
-
-          return;
-        }
-
-        const texto = [
-          "CHINA PRO — CÁLCULO",
-          `Valor original: ${formatarBRL(resultado.valor)}`,
-          `Porcentagem: ${resultado.percentual}%`,
-          `Valor da porcentagem: ${formatarBRL(resultado.valorGanho)}`,
-          `Valor a enviar: ${formatarBRL(resultado.valorEnviar)}`
-        ].join("\n");
-
-        try{
-          await navigator.clipboard.writeText(
-            texto
-          );
-
-          status.textContent =
-            "✅ Cálculo copiado.";
-        }
-        catch{
-          status.textContent =
-            "❌ Não foi possível copiar automaticamente.";
-        }
-      }
-    );
+    if(status){
+      status.textContent = "";
+    }
 
     calcular();
-  }
-);
+  });
+
+  percentualInput?.addEventListener("input", () => {
+    if(status){
+      status.textContent = "";
+    }
+    calcular();
+  });
+
+  presets.forEach(botao => {
+    botao.addEventListener("click", () => {
+      if(percentualInput){
+        percentualInput.value = botao.dataset.percentual;
+      }
+
+      if(status){
+        status.textContent = "";
+      }
+
+      calcular();
+    });
+  });
+
+  copiarNumero?.addEventListener("click", async () => {
+    const resultado = calcular();
+
+    if(!resultado.valor){
+      if(status){
+        status.textContent = "⚠️ Informe um valor primeiro.";
+      }
+      return;
+    }
+
+    try{
+      await copiarTexto(
+        numeroPuro(resultado.valorEnviar)
+      );
+
+      if(status){
+        status.textContent =
+          `✅ Número copiado: ${numeroPuro(resultado.valorEnviar)}`;
+      }
+    }catch{
+      if(status){
+        status.textContent =
+          "❌ Não foi possível copiar o número.";
+      }
+    }
+  });
+
+  copiarCompleto?.addEventListener("click", async () => {
+    const resultado = calcular();
+
+    if(!resultado.valor){
+      if(status){
+        status.textContent = "⚠️ Informe um valor primeiro.";
+      }
+      return;
+    }
+
+    const texto = [
+      "CHINA PRO — CÁLCULO",
+      `Valor original: ${formatarBRL(resultado.valor)}`,
+      `Porcentagem: ${resultado.percentual}%`,
+      `Valor da porcentagem: ${formatarBRL(resultado.valorGanho)}`,
+      `Valor a enviar: ${formatarBRL(resultado.valorEnviar)}`
+    ].join("\n");
+
+    try{
+      await copiarTexto(texto);
+
+      if(status){
+        status.textContent = "✅ Cálculo completo copiado.";
+      }
+    }catch{
+      if(status){
+        status.textContent =
+          "❌ Não foi possível copiar o cálculo.";
+      }
+    }
+  });
+
+  limpar?.addEventListener("click", () => {
+    if(valorInput){
+      valorInput.value = "";
+      valorInput.focus();
+    }
+
+    if(percentualInput){
+      percentualInput.value = "25";
+    }
+
+    if(status){
+      status.textContent = "";
+    }
+
+    calcular();
+  });
+
+  calcular();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("[data-calculadora]")
+    .forEach(iniciarCalculadora);
+});
+
+window.iniciarCalculadoraChinaPro = iniciarCalculadora;
 })();

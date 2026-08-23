@@ -1,0 +1,14 @@
+CHINA PRO — CALCULADORA V2
+
+Mudanças:
+- CSS da calculadora refeito para combinar com o Dashboard.
+- Calculadora completa adicionada diretamente ao Dashboard.
+- Mantida também a página própria da Calculadora.
+- Mesma lógica funciona nas duas áreas.
+- Limite permanece de 20% a 40%.
+- Botões rápidos: 20, 25, 30, 35 e 40%.
+- Novo botão "Copiar número":
+  copia somente o valor final a enviar, sem R$, sem texto adicional.
+- Mantido "Copiar cálculo" para copiar o relatório completo.
+- Botão Limpar mantido.
+- Layout responsivo para notebook/celular.

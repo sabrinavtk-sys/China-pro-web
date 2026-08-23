@@ -6,171 +6,109 @@
 {% block content %}
 <section class="page-intro">
   <div>
-    <span class="kicker">CHINA PRO</span>
+    <span class="kicker">FERRAMENTA RÁPIDA</span>
     <h2>🧮 Calculadora de Lavagem</h2>
     <p class="muted">
-      Calcule rapidamente o valor enviado e o ganho da operação.
-      A porcentagem aceita é de 20% até 40%.
+      Informe o valor recebido e escolha uma porcentagem entre 20% e 40%.
     </p>
   </div>
 </section>
 
-<section class="calculator-layout">
+<section class="china-calc-page-wrap">
 
-  <article class="card calculator-card">
-
-    <div class="section-title">
-      <div>
-        <span class="kicker">VALOR DA OPERAÇÃO</span>
-        <h2>Calcular porcentagem</h2>
-      </div>
+<div class="china-calc" data-calculadora>
+  <div class="china-calc-head">
+    <div>
+      <span class="china-calc-kicker">CALCULADORA DE LAVAGEM</span>
+      <h3>🧮 Cálculo rápido</h3>
+      <p>Taxa permitida: de 20% até 40%.</p>
     </div>
+    <div class="china-calc-limit">20% — 40%</div>
+  </div>
 
-    <div class="calculator-field">
-      <label for="calcValor">
-        Valor original / recebido
+  <div class="china-calc-body">
+    <div class="china-calc-inputs">
+      <label>
+        <span>Valor original / recebido</span>
+        <div class="china-money-input">
+          <b>R$</b>
+          <input
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="1.000.000"
+            data-calc-valor
+          >
+        </div>
       </label>
 
-      <div class="money-input">
-        <span>R$</span>
+      <div class="china-calc-percent">
+        <div class="china-calc-percent-top">
+          <span>Porcentagem aplicada</span>
+          <strong data-calc-percent-text>25%</strong>
+        </div>
+
         <input
-          id="calcValor"
-          type="text"
-          inputmode="numeric"
-          placeholder="Ex.: 1.000.000"
-          autocomplete="off"
+          type="range"
+          min="20"
+          max="40"
+          step="1"
+          value="25"
+          data-calc-percent
         >
+
+        <div class="china-calc-presets">
+          <button type="button" data-percentual="20">20%</button>
+          <button type="button" data-percentual="25" class="active">25%</button>
+          <button type="button" data-percentual="30">30%</button>
+          <button type="button" data-percentual="35">35%</button>
+          <button type="button" data-percentual="40">40%</button>
+        </div>
       </div>
     </div>
 
-    <div class="calculator-field">
-      <div class="calculator-label-row">
-        <label for="calcPorcentagem">
-          Porcentagem
-        </label>
-
-        <strong id="calcPorcentagemTexto">
-          25%
-        </strong>
-      </div>
-
-      <input
-        id="calcPorcentagem"
-        class="calculator-range"
-        type="range"
-        min="20"
-        max="40"
-        step="1"
-        value="25"
-      >
-
-      <div class="calculator-range-labels">
-        <span>20%</span>
-        <span>40%</span>
-      </div>
-
-      <div class="calculator-presets">
-        <button type="button" data-percentual="20">20%</button>
-        <button type="button" data-percentual="25" class="active">25%</button>
-        <button type="button" data-percentual="30">30%</button>
-        <button type="button" data-percentual="35">35%</button>
-        <button type="button" data-percentual="40">40%</button>
-      </div>
-    </div>
-
-    <div class="calculator-results">
-
-      <div class="calculator-result main">
+    <div class="china-calc-results">
+      <article class="china-calc-result featured">
         <span>Valor a enviar</span>
-        <strong id="calcEnviar">
-          R$ 0,00
-        </strong>
-        <small>
-          Valor que sobra após retirar a porcentagem.
-        </small>
-      </div>
+        <strong data-calc-enviar>R$ 0,00</strong>
+        <div class="china-calc-result-actions">
+          <button type="button" data-calc-copy-number>
+            🔢 Copiar número
+          </button>
+          <button type="button" data-calc-copy-full class="secondary">
+            📋 Copiar cálculo
+          </button>
+        </div>
+      </article>
 
-      <div class="calculator-result">
-        <span>Valor da porcentagem</span>
-        <strong id="calcGanho">
-          R$ 0,00
-        </strong>
-      </div>
+      <article class="china-calc-result">
+        <span>Ganho / porcentagem</span>
+        <strong data-calc-ganho>R$ 0,00</strong>
+      </article>
 
-      <div class="calculator-result">
+      <article class="china-calc-result">
         <span>Valor original</span>
-        <strong id="calcOriginal">
-          R$ 0,00
-        </strong>
-      </div>
+        <strong data-calc-original>R$ 0,00</strong>
+      </article>
 
-      <div class="calculator-result">
-        <span>Taxa aplicada</span>
-        <strong id="calcTaxa">
-          25%
-        </strong>
-      </div>
-
+      <article class="china-calc-result">
+        <span>Taxa</span>
+        <strong data-calc-taxa>25%</strong>
+      </article>
     </div>
+  </div>
 
-    <div class="calculator-actions">
-      <button
-        type="button"
-        id="calcCopiar"
-      >
-        📋 Copiar cálculo
-      </button>
-
-      <button
-        type="button"
-        id="calcLimpar"
-        class="btn secondary"
-      >
-        🧹 Limpar
-      </button>
-    </div>
-
-    <div
-      id="calcStatus"
-      class="calculator-status"
-      aria-live="polite"
-    ></div>
-
-  </article>
-
-  <aside class="card calculator-help">
-    <span class="kicker">REGRA</span>
-    <h2>20% a 40%</h2>
-
-    <div class="calculator-rule">
-      <b>Valor recebido</b>
-      <span>R$ 1.000.000</span>
-    </div>
-
-    <div class="calculator-rule">
-      <b>Porcentagem</b>
-      <span>25%</span>
-    </div>
-
-    <div class="calculator-rule highlight">
-      <b>Ganho</b>
-      <span>R$ 250.000</span>
-    </div>
-
-    <div class="calculator-rule">
-      <b>Valor enviado</b>
-      <span>R$ 750.000</span>
-    </div>
-
-    <div class="notice">
-      A calculadora não permite porcentagem menor que
-      <b>20%</b> nem maior que <b>40%</b>.
-    </div>
-  </aside>
+  <div class="china-calc-footer">
+    <span data-calc-status aria-live="polite"></span>
+    <button type="button" data-calc-clear class="china-calc-clear">
+      🧹 Limpar
+    </button>
+  </div>
+</div>
 
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-1"></script>
+<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-2"></script>
 {% endblock %}

@@ -301,12 +301,119 @@
           <a class="china-quick" href="{{ url_for('acoes') }}"><span class="ico">🔫</span><b>Ações</b><small>{{ total_acoes }} registros</small></a>
           <a class="china-quick" href="{{ url_for('desmanches') }}"><span class="ico">🚗</span><b>Desmanches</b><small>{{ total_desmanches }} registros</small></a>
           <a class="china-quick" href="{{ url_for('ranking') }}"><span class="ico">🏆</span><b>Ranking</b><small>{{ pontos_acao }} pontos de ação</small></a>
+          <a class="china-quick" href="#calculadoraDashboard"><span class="ico">🧮</span><b>Calculadora</b><small>20% a 40%</small></a>
           <a class="china-quick china-teaser" href="javascript:void(0)" onclick="alert('🔒 Cassino da China — próxima atualização. Em breve!')"><span class="ico">🎰</span><b>Cassino da China</b><small>Próxima atualização</small></a>
         </section>
 
         <!-- =====================================
              CARDS
         ====================================== -->
+
+
+        <section class="dashboard-calc-section" id="calculadoraDashboard">
+          <div class="dashboard-calc-title">
+            <div>
+              <span class="topbar-legenda">FERRAMENTA RÁPIDA</span>
+              <h2>🧮 Calculadora</h2>
+              <p>Faça a conta sem sair do Dashboard.</p>
+            </div>
+            <a href="{{ url_for('calculadora') }}" class="meta-config-link">
+              Abrir página completa →
+            </a>
+          </div>
+
+
+<div class="china-calc" data-calculadora>
+  <div class="china-calc-head">
+    <div>
+      <span class="china-calc-kicker">CALCULADORA DE LAVAGEM</span>
+      <h3>🧮 Cálculo rápido</h3>
+      <p>Taxa permitida: de 20% até 40%.</p>
+    </div>
+    <div class="china-calc-limit">20% — 40%</div>
+  </div>
+
+  <div class="china-calc-body">
+    <div class="china-calc-inputs">
+      <label>
+        <span>Valor original / recebido</span>
+        <div class="china-money-input">
+          <b>R$</b>
+          <input
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="1.000.000"
+            data-calc-valor
+          >
+        </div>
+      </label>
+
+      <div class="china-calc-percent">
+        <div class="china-calc-percent-top">
+          <span>Porcentagem aplicada</span>
+          <strong data-calc-percent-text>25%</strong>
+        </div>
+
+        <input
+          type="range"
+          min="20"
+          max="40"
+          step="1"
+          value="25"
+          data-calc-percent
+        >
+
+        <div class="china-calc-presets">
+          <button type="button" data-percentual="20">20%</button>
+          <button type="button" data-percentual="25" class="active">25%</button>
+          <button type="button" data-percentual="30">30%</button>
+          <button type="button" data-percentual="35">35%</button>
+          <button type="button" data-percentual="40">40%</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="china-calc-results">
+      <article class="china-calc-result featured">
+        <span>Valor a enviar</span>
+        <strong data-calc-enviar>R$ 0,00</strong>
+        <div class="china-calc-result-actions">
+          <button type="button" data-calc-copy-number>
+            🔢 Copiar número
+          </button>
+          <button type="button" data-calc-copy-full class="secondary">
+            📋 Copiar cálculo
+          </button>
+        </div>
+      </article>
+
+      <article class="china-calc-result">
+        <span>Ganho / porcentagem</span>
+        <strong data-calc-ganho>R$ 0,00</strong>
+      </article>
+
+      <article class="china-calc-result">
+        <span>Valor original</span>
+        <strong data-calc-original>R$ 0,00</strong>
+      </article>
+
+      <article class="china-calc-result">
+        <span>Taxa</span>
+        <strong data-calc-taxa>25%</strong>
+      </article>
+    </div>
+  </div>
+
+  <div class="china-calc-footer">
+    <span data-calc-status aria-live="polite"></span>
+    <button type="button" data-calc-clear class="china-calc-clear">
+      🧹 Limpar
+    </button>
+  </div>
+</div>
+
+        </section>
 
         <section class="meta-semanal-box">
             <div class="meta-semanal-topo">
@@ -1257,6 +1364,7 @@ document.addEventListener(
 <script src="{{ url_for('static', filename='js/parser.js') }}?v=58"></script>
 <script src="{{ url_for('static', filename='js/ocr.js') }}?v=58"></script>
 <script src="{{ url_for('static', filename='js/print-quality.js') }}?v=20260820-1"></script>
+<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-2"></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}?v=20260823-clear1"></script>
 </body>
 
