@@ -24,7 +24,10 @@
       <div><b>🔎 OCR do Desmanche</b><small id="ocrDesmancheInfo">Selecione um print para iniciar.</small></div>
       <button id="btnOcrDesmanche" type="button" class="btn secondary">Ler print</button>
     </div>
-    <div class="actions"><button type="submit">Salvar desmanche</button></div>
+    <div class="actions">
+      <button type="submit">Salvar desmanche</button>
+      <button type="button" id="limparDesmanche" class="btn secondary">🧹 Limpar</button>
+    </div>
     <div id="statusDesmanche"></div>
   </form>
 
@@ -54,5 +57,5 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="{{ url_for('static', filename='js/desmanche-ocr.js') }}?v=2"></script>
-<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260821-ocr1"></script>
+<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260823-clear1"></script>
 {% endblock %}

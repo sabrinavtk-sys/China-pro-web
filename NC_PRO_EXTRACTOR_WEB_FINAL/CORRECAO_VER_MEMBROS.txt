@@ -1,0 +1,14 @@
+CHINA PRO — CORREÇÃO VER MEMBROS
+
+Correções:
+- Corrigido uso de abs() direto no Jinja da página admin_membro.
+- Agora usa o filtro seguro |abs.
+- Valores antigos/nulos de lavagem e desmanche são tratados como zero na exibição.
+- Responsável/categoria ausentes não derrubam a página.
+- Soma de pontos aceita registros antigos com pontos nulos.
+- Link do botão Ver revisado para endpoint admin_membro(usuario_id).
+- Auditoria de endpoints: OK.
+- Python/Jinja/JavaScript: OK.
+
+Validação de runtime local:
+import não executado por ambiente/configuração: ModuleNotFoundError: No module named 'flask'

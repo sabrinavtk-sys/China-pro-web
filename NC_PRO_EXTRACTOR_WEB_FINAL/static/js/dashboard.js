@@ -1852,6 +1852,112 @@ window.limparDadosOperacao =
 limparDadosOperacao;
 
 
+
+// =========================================================
+// LIMPAR FORMULÁRIO DE LAVAGEM
+// =========================================================
+
+function limparLavagemCompleta(){
+
+    const idsArquivos = [
+        "printEnvio",
+        "printRecebimento"
+    ];
+
+    idsArquivos.forEach(id => {
+        const input = obterElemento(id);
+        if(input){
+            input.value = "";
+        }
+    });
+
+    [
+        "previewEnvio",
+        "previewRecebimento"
+    ].forEach(id => {
+        const preview = obterElemento(id);
+
+        if(!preview){
+            return;
+        }
+
+        if(preview.dataset.urlAnterior){
+            URL.revokeObjectURL(
+                preview.dataset.urlAnterior
+            );
+
+            delete preview.dataset.urlAnterior;
+        }
+
+        preview.removeAttribute("src");
+    });
+
+    if(
+        typeof window.limparProcessamentoAnterior ===
+        "function"
+    ){
+        window.limparProcessamentoAnterior();
+    }
+    else{
+        limparDadosOperacao();
+    }
+
+    const consoleOCR =
+        obterElemento("resultadoOCR");
+
+    if(consoleOCR){
+        consoleOCR.textContent =
+            "Aguardando novo processamento...";
+    }
+
+    const qualidade =
+        obterElemento("qualidadePrintsStatus");
+
+    if(qualidade){
+        qualidade.className =
+            "print-quality-status";
+
+        qualidade.textContent =
+            "Aguardando os dois prints.";
+    }
+
+    window.resultadoOCR = null;
+
+    console.log(
+        "FORMULÁRIO DE LAVAGEM LIMPO"
+    );
+}
+
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        obterElemento(
+            "limparLavagem"
+        )?.addEventListener(
+            "click",
+            function(){
+
+                if(
+                    confirm(
+                        "Limpar os dados desta lavagem e começar novamente?"
+                    )
+                ){
+                    limparLavagemCompleta();
+                }
+
+            }
+        );
+
+    }
+);
+
+
+window.limparLavagemCompleta =
+limparLavagemCompleta;
+
+
 // =========================================================
 // EXPORTAÇÕES
 // =========================================================

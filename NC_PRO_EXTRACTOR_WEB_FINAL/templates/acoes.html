@@ -25,7 +25,10 @@
     </div>
 
     <div id="pontosPreview" class="notice">Pontos: calculados automaticamente.</div>
-    <div class="actions"><button type="submit">Salvar ação</button></div>
+    <div class="actions">
+      <button type="submit">Salvar ação</button>
+      <button type="button" id="limparAcao" class="btn secondary">🧹 Limpar</button>
+    </div>
     <div id="statusAcao"></div>
   </form>
 
@@ -54,4 +57,4 @@
   </div>
 </section>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='js/acoes.js') }}?v=20260819b"></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/acoes.js') }}?v=20260823-clear1b"></script>{% endblock %}

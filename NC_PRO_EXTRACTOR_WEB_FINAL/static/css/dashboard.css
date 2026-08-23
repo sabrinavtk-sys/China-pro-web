@@ -2012,3 +2012,18 @@ body {
 @media(max-width:900px){
     .sidebar{height:100dvh !important;max-height:100dvh !important;overflow-y:auto !important}
 }
+
+
+/* Botão Limpar — Lavagem */
+.btn-limpar{
+    border-color:rgba(255,255,255,.14)!important;
+    background:linear-gradient(
+        145deg,
+        rgba(255,255,255,.045),
+        rgba(255,255,255,.015)
+    )!important;
+}
+.btn-limpar:hover{
+    border-color:rgba(255,90,125,.35)!important;
+    transform:translateY(-1px);
+}

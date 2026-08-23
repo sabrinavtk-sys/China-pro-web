@@ -1,0 +1,28 @@
+CHINA PRO — CORREÇÃO + BOTÕES LIMPAR
+
+Correções:
+- Desmanche agora identifica corretamente sessão expirada em vez de retornar erro genérico de HTML/formato.
+- Botão Limpar adicionado em Lavagem, Ação e Desmanche.
+
+LIMPAR LAVAGEM:
+- Remove os dois prints selecionados.
+- Remove as prévias.
+- Zera resultado OCR.
+- Limpa Nome, ID, Data/Hora, valores, porcentagem, ganho e observações.
+- Limpa mensagens do processamento.
+
+LIMPAR AÇÃO:
+- Zera todos os campos.
+- Remove o print selecionado.
+- Limpa mensagens.
+- Recoloca a data/hora atual.
+- Atualiza a pontuação automática.
+
+LIMPAR DESMANCHE:
+- Zera modelo, valor, destino e print.
+- Limpa o resultado/status do OCR.
+- Recoloca a data/hora atual.
+
+IMPORTANTE:
+Os botões NÃO apagam histórico nem registros do banco.
+Eles apenas limpam o formulário atual.

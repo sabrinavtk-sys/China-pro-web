@@ -1796,13 +1796,13 @@ def configurar_rotas(app):
         ).limit(50).all()
 
         pontos_acao = sum(
-            item.pontos
+            int(item.pontos or 0)
             for item in extrato
             if item.categoria == "acao"
         )
 
         pontos_lavagem = sum(
-            item.pontos
+            int(item.pontos or 0)
             for item in extrato
             if item.categoria == "lavagem"
         )

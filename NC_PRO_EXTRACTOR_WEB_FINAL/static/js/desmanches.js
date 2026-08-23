@@ -24,8 +24,15 @@ async function lerRespostaAPI(resposta){
     }
   }
 
-  // Não expõe HTML da Vercel na tela.
-  // Mostra status suficiente para identificar o problema.
+  if(
+    resposta.redirected ||
+    resposta.url.includes("/login")
+  ){
+    throw new Error(
+      "Sua sessão expirou. Entre novamente no sistema."
+    );
+  }
+
   const erro = new Error(
     `O servidor respondeu em formato incorreto (HTTP ${resposta.status}).`
   );
@@ -39,6 +46,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const arquivoOCR = document.querySelector("#provaDesmanche");
   const botaoOCR = document.querySelector("#btnOcrDesmanche");
   const infoOCR = document.querySelector("#ocrDesmancheInfo");
+
+
+  const limparDesmanche =
+    document.querySelector("#limparDesmanche");
+
+  function limparFormularioDesmanche(){
+    form?.reset();
+
+    if(data){
+      data.value =
+        agoraLocalInput();
+    }
+
+    const status =
+      document.querySelector("#statusDesmanche");
+
+    if(status){
+      status.innerHTML = "";
+    }
+
+    if(infoOCR){
+      infoOCR.textContent =
+        "Selecione um print para iniciar.";
+    }
+
+    if(botaoOCR){
+      botaoOCR.disabled = false;
+    }
+
+    console.log(
+      "FORMULÁRIO DE DESMANCHE LIMPO"
+    );
+  }
+
+  limparDesmanche?.addEventListener(
+    "click",
+    () => {
+      if(
+        confirm(
+          "Limpar os dados deste desmanche e começar novamente?"
+        )
+      ){
+        limparFormularioDesmanche();
+      }
+    }
+  );
 
   async function processarOCRDesmanche(){
     const file=arquivoOCR?.files?.[0];

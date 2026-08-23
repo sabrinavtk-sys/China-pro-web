@@ -53,6 +53,32 @@ document.addEventListener("DOMContentLoaded",()=>{
   resultado?.addEventListener("change",atualizarPontos);
   atualizarPontos();
 
+
+  const limparAcao=document.querySelector("#limparAcao");
+
+  function limparFormularioAcao(){
+    form?.reset();
+
+    if(data){
+      data.value=agoraLocalInput();
+    }
+
+    const status=document.querySelector("#statusAcao");
+    if(status){
+      status.innerHTML="";
+    }
+
+    atualizarPontos();
+
+    console.log("FORMULÁRIO DE AÇÃO LIMPO");
+  }
+
+  limparAcao?.addEventListener("click",()=>{
+    if(confirm("Limpar os dados desta ação e começar novamente?")){
+      limparFormularioAcao();
+    }
+  });
+
   if(!form) return;
 
   form.addEventListener("submit",async e=>{
