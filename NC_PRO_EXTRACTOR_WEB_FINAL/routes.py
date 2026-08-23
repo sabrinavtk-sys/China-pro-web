@@ -1757,77 +1757,287 @@ def configurar_rotas(app):
     @login_required
     @admin_required
     def admin_membro(usuario_id):
+        """
+        Detalhe administrativo do membro.
+
+        A rota prepara dados simples para o template para evitar erro 500
+        causado por Decimal, timezone ou registros antigos incompletos.
+        """
         usuario = db.session.get(
             Usuario,
-            usuario_id
+            usuario_id,
         )
 
         if usuario is None:
-            flash("Membro não encontrado.", "erro")
-            return redirect(url_for("admin_dashboard"))
+            flash(
+                "Membro não encontrado.",
+                "erro",
+            )
+            return redirect(
+                url_for("admin_dashboard")
+            )
 
-        perfil = PerfilSetor.query.filter_by(
-            usuario_id=usuario.id
-        ).first()
-        perfil_game = obter_perfil_game(usuario.id)
+        try:
+            perfil = PerfilSetor.query.filter_by(
+                usuario_id=usuario.id
+            ).first()
 
-        lavagens = Operacao.query.filter_by(
-            usuario_id=usuario.id
-        ).order_by(
-            Operacao.criado_em.desc()
-        ).limit(25).all()
+            perfil_game = obter_perfil_game(
+                usuario.id
+            )
 
-        acoes = Acao.query.filter_by(
-            usuario_id=usuario.id
-        ).order_by(
-            Acao.data_hora.desc()
-        ).limit(25).all()
+            lavagens_db = Operacao.query.filter_by(
+                usuario_id=usuario.id
+            ).order_by(
+                Operacao.criado_em.desc()
+            ).limit(25).all()
 
-        desmanches = Desmanche.query.filter_by(
-            usuario_id=usuario.id
-        ).order_by(
-            Desmanche.data_hora.desc()
-        ).limit(25).all()
+            acoes_db = Acao.query.filter_by(
+                usuario_id=usuario.id
+            ).order_by(
+                Acao.data_hora.desc()
+            ).limit(25).all()
 
-        extrato = ExtratoPonto.query.filter_by(
-            usuario_id=usuario.id
-        ).order_by(
-            ExtratoPonto.criado_em.desc()
-        ).limit(50).all()
+            desmanches_db = Desmanche.query.filter_by(
+                usuario_id=usuario.id
+            ).order_by(
+                Desmanche.data_hora.desc()
+            ).limit(25).all()
 
-        pontos_acao = sum(
-            int(item.pontos or 0)
-            for item in extrato
-            if item.categoria == "acao"
-        )
+            extrato_db = ExtratoPonto.query.filter_by(
+                usuario_id=usuario.id
+            ).order_by(
+                ExtratoPonto.criado_em.desc()
+            ).limit(50).all()
 
-        pontos_lavagem = sum(
-            int(item.pontos or 0)
-            for item in extrato
-            if item.categoria == "lavagem"
-        )
+            def moeda_segura(valor):
+                try:
+                    numero = float(
+                        valor or 0
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    numero = 0
 
-        return render_template(
-            "admin_membro.html",
-            membro=usuario,
-            perfil=perfil,
-            perfil_game=perfil_game,
-            lavagens=lavagens,
-            acoes=acoes,
-            desmanches=desmanches,
-            extrato=extrato,
-            pontos_acao=pontos_acao,
-            pontos_lavagem=pontos_lavagem,
-            advertencias=AdvertenciaAdmin.query.filter_by(
+                return (
+                    f"{numero:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                )
+
+            def data_segura(valor):
+                if valor is None:
+                    return "—"
+
+                try:
+                    if (
+                        getattr(
+                            valor,
+                            "tzinfo",
+                            None,
+                        )
+                        is None
+                    ):
+                        valor = valor.replace(
+                            tzinfo=timezone.utc
+                        )
+
+                    return (
+                        valor
+                        .astimezone(FUSO_LOCAL)
+                        .strftime(
+                            "%d/%m/%Y %H:%M"
+                        )
+                    )
+
+                except Exception:
+                    return "—"
+
+            lavagens = []
+
+            for op in lavagens_db:
+                try:
+                    percentual = abs(
+                        float(
+                            op.porcentagem
+                            or 0
+                        )
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    percentual = 0
+
+                lavagens.append({
+                    "nome": (
+                        op.nome_jogador
+                        or "Não informado"
+                    ),
+                    "id_game": (
+                        op.id_jogador
+                        or "—"
+                    ),
+                    "percentual": int(
+                        round(percentual)
+                    ),
+                    "valor": moeda_segura(
+                        op.valor
+                    ),
+                    "data": data_segura(
+                        op.criado_em
+                    ),
+                })
+
+            acoes = [
+                {
+                    "tipo": (
+                        item.tipo
+                        or "Ação"
+                    ),
+                    "resultado": (
+                        item.resultado
+                        or "—"
+                    ),
+                    "pontos": int(
+                        item.pontos
+                        or 0
+                    ),
+                    "responsavel": (
+                        item.responsavel
+                        or "Não informado"
+                    ),
+                    "data": data_segura(
+                        item.data_hora
+                    ),
+                }
+                for item in acoes_db
+            ]
+
+            desmanches = [
+                {
+                    "modelo": (
+                        item.modelo
+                        or "Não informado"
+                    ),
+                    "pontos": int(
+                        item.pontos
+                        or 0
+                    ),
+                    "destino": (
+                        item.destino_pontos
+                        or "—"
+                    ),
+                    "valor": moeda_segura(
+                        item.quantidade
+                    ),
+                    "data": data_segura(
+                        item.data_hora
+                    ),
+                }
+                for item in desmanches_db
+            ]
+
+            extrato = [
+                {
+                    "descricao": (
+                        item.descricao
+                        or "Registro"
+                    ),
+                    "pontos": int(
+                        item.pontos
+                        or 0
+                    ),
+                    "categoria": (
+                        item.categoria
+                        or "—"
+                    ),
+                    "data": data_segura(
+                        item.criado_em
+                    ),
+                }
+                for item in extrato_db
+            ]
+
+            pontos_acao = sum(
+                item["pontos"]
+                for item in extrato
+                if item["categoria"] == "acao"
+            )
+
+            pontos_lavagem = sum(
+                item["pontos"]
+                for item in extrato
+                if item["categoria"] == "lavagem"
+            )
+
+            adv_db = AdvertenciaAdmin.query.filter_by(
                 usuario_id=usuario.id
             ).order_by(
                 AdvertenciaAdmin.criado_em.desc()
-            ).limit(20).all(),
-            advertencias_ativas=advertencias_ativas(usuario.id),
-            cargos_lavagem=ORDEM_CARGOS,
-            cargos_acao=CARGOS_ACAO_CADASTRO,
-            cargos_gerencia=CARGOS_GERENCIA,
-        )
+            ).limit(20).all()
+
+            advertencias = [
+                {
+                    "id": adv.id,
+                    "motivo": (
+                        adv.motivo
+                        or "Sem motivo informado."
+                    ),
+                    "criado_em": data_segura(
+                        adv.criado_em
+                    ),
+                    "expira_em": data_segura(
+                        adv.expira_em
+                    ),
+                    "removida": bool(
+                        adv.removida
+                    ),
+                }
+                for adv in adv_db
+            ]
+
+            ads_ativas = advertencias_ativas(
+                usuario.id
+            )
+
+            return render_template(
+                "admin_membro.html",
+                membro=usuario,
+                perfil=perfil,
+                perfil_game=perfil_game,
+                lavagens=lavagens,
+                acoes=acoes,
+                desmanches=desmanches,
+                extrato=extrato,
+                pontos_acao=pontos_acao,
+                pontos_lavagem=pontos_lavagem,
+                advertencias=advertencias,
+                total_advertencias_ativas=len(
+                    ads_ativas
+                ),
+                cargos_lavagem=ORDEM_CARGOS,
+                cargos_acao=CARGOS_ACAO_CADASTRO,
+                cargos_gerencia=CARGOS_GERENCIA,
+            )
+
+        except SQLAlchemyError:
+            logger.exception(
+                "Erro de banco ao abrir membro ADM %s",
+                usuario_id,
+            )
+
+            flash(
+                "Não foi possível carregar os dados do membro.",
+                "erro",
+            )
+
+            return redirect(
+                url_for("admin_dashboard")
+            )
 
 
     @app.route("/reset-semanal", methods=["POST"])
@@ -2625,7 +2835,54 @@ def configurar_rotas_gestao(app):
                     codigo="DESMANCHE_VALIDACAO",
                 ), 400
 
-            pontos = 2 if destino == "acao" else 1
+            # Regra atual de Desmanche:
+            # - cada desmanche destinado à Ação vale +1 ponto;
+            # - Lavagem continua +1 ponto;
+            # - a cada R$ 2.000.000 acumulados em dinheiro de desmanche,
+            #   o usuário recebe +2 pontos extras no mesmo destino escolhido.
+            pontos_base = 1
+
+            total_antes = db.session.query(
+                func.coalesce(
+                    func.sum(Desmanche.quantidade),
+                    0,
+                )
+            ).filter(
+                Desmanche.usuario_id == current_user.id
+            ).scalar()
+
+            total_antes = Decimal(
+                str(total_antes or 0)
+            )
+
+            faixa_antes = int(
+                total_antes //
+                Decimal("2000000")
+            )
+
+            total_depois = (
+                total_antes +
+                quantidade
+            )
+
+            faixa_depois = int(
+                total_depois //
+                Decimal("2000000")
+            )
+
+            faixas_novas = max(
+                0,
+                faixa_depois - faixa_antes
+            )
+
+            pontos_bonus = (
+                faixas_novas * 2
+            )
+
+            pontos = (
+                pontos_base +
+                pontos_bonus
+            )
 
             assinatura = fingerprint(
                 current_user.id,
@@ -2671,7 +2928,14 @@ def configurar_rotas_gestao(app):
                 origem_id=registro.id,
                 categoria=destino,
                 pontos=pontos,
-                descricao=f"Desmanche {modelo}",
+                descricao=(
+                    f"Desmanche {modelo}"
+                    + (
+                        f" + bônus R$ 2M x{faixas_novas}"
+                        if faixas_novas
+                        else ""
+                    )
+                ),
                 criado_em=data_hora,
             )
 
@@ -2681,6 +2945,17 @@ def configurar_rotas_gestao(app):
             return jsonify(
                 sucesso=True,
                 pontos=pontos,
+                pontos_base=pontos_base,
+                pontos_bonus=pontos_bonus,
+                faixas_bonus=faixas_novas,
+                total_desmanches=float(total_depois),
+                proximo_bonus=float(
+                    (
+                        Decimal(faixa_depois + 1)
+                        * Decimal("2000000")
+                    )
+                    - total_depois
+                ),
                 id=registro.id,
             ), 201
 

@@ -3,7 +3,7 @@
 {% block page_heading %}Desmanches{% endblock %}
 {% block content %}
 <section class="page-intro">
-  <div><span class="kicker">VEÍCULO DESMANCHADO</span><h2>🚗 Registrar desmanche</h2><p class="muted">Escolha +2 pontos para Ação ou +1 ponto para Lavagem.</p></div>
+  <div><span class="kicker">VEÍCULO DESMANCHADO</span><h2>🚗 Registrar desmanche</h2><p class="muted">Cada desmanche vale +1 ponto. A cada R$ 2.000.000 acumulados em desmanches, você recebe +2 pontos extras.</p></div>
 </section>
 
 <section class="content-grid content-grid-2">
@@ -12,7 +12,7 @@
       <div><label>Modelo do veículo</label><input id="modelo" placeholder="Ex.: AMG G65" required></div>
       <div><label>Data e hora</label><input id="dataDesmanche" type="datetime-local" required></div>
       <div><label>Quantidade recebida</label><input id="quantidade" type="number" min="1" step="0.01" placeholder="56000" required></div>
-      <div><label>Pontuação</label><select id="destino" required><option value="acao">🔫 Ação — +2 pontos</option><option value="lavagem">💰 Lavagem — +1 ponto</option></select></div>
+      <div><label>Pontuação</label><select id="destino" required><option value="acao">🔫 Ação — +1 ponto</option><option value="lavagem">💰 Lavagem — +1 ponto</option></select></div>
     </div>
 
     <div class="proof">
@@ -41,7 +41,7 @@
       <p><span>Quantidade recebida:</span> R$ 56.000</p>
       <p><span>Print:</span> Validado</p>
     </div>
-    <div class="notice">Duplicidade é bloqueada automaticamente pelo usuário, veículo, horário, valor, destino e assinatura do print.</div>
+    <div class="notice"><b>Bônus por dinheiro:</b> a cada R$ 2.000.000 acumulados em desmanches, +2 pontos extras. O bônus entra automaticamente no destino escolhido.</div><div class="notice">Duplicidade é bloqueada automaticamente pelo usuário, veículo, horário, valor, destino e assinatura do print.</div>
   </aside>
 </section>
 
@@ -57,5 +57,5 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="{{ url_for('static', filename='js/desmanche-ocr.js') }}?v=2"></script>
-<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260823-clear1"></script>
+<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260823-pontos2m"></script>
 {% endblock %}

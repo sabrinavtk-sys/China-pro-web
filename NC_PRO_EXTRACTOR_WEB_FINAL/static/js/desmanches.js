@@ -168,8 +168,13 @@ document.addEventListener("DOMContentLoaded", () => {
         throw erro;
       }
 
+      const bonus = Number(dados.pontos_bonus || 0);
+      const detalheBonus = bonus > 0
+        ? ` (+${bonus} de bônus por dinheiro)`
+        : "";
+
       status.innerHTML =
-        `<p class="good">✅ Desmanche salvo com sucesso. +${dados.pontos} pontos.</p>`;
+        `<p class="good">✅ Desmanche salvo com sucesso. +${dados.pontos} ponto(s)${detalheBonus}.</p>`;
 
       form.reset();
       if(data) data.value = agoraLocalInput();

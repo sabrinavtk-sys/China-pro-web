@@ -1,0 +1,14 @@
+CHINA PRO — AJUSTE
+
+DESMANCHE
+- Cada desmanche destinado à Ação vale +1 ponto.
+- Lavagem também permanece +1 ponto por desmanche.
+- A cada R$ 2.000.000 acumulados em dinheiro de desmanche, são concedidos +2 pontos extras.
+- O bônus é calculado pela passagem de cada faixa de R$ 2 milhões, portanto não duplica ao salvar novos registros.
+- O bônus é lançado no mesmo destino escolhido no registro.
+
+VER MEMBROS
+- Página administrativa reconstruída para trabalhar com dados já formatados no Python.
+- Evita operações de Decimal, timezone e cálculos sensíveis dentro do Jinja.
+- Registros antigos/nulos são tratados com fallback.
+- O objetivo é eliminar o erro 500 ao abrir /admin/membro/<id>.

@@ -28,7 +28,7 @@
     <div class="adv-summary">
       <div>
         <span>ADVs ativas</span>
-        <strong>{{ advertencias_ativas|length }} / 2</strong>
+        <strong>{{ total_advertencias_ativas }} / 2</strong>
       </div>
       <div>
         <span>Duração</span>
@@ -37,9 +37,9 @@
       <div>
         <span>Situação</span>
         <strong>
-          {% if advertencias_ativas|length >= 2 %}
+          {% if total_advertencias_ativas >= 2 %}
             🔴 PD
-          {% elif advertencias_ativas|length == 1 %}
+          {% elif total_advertencias_ativas == 1 %}
             🟡 1 ADV
           {% else %}
             🟢 Regular
@@ -67,8 +67,8 @@
           <b>ADV #{{ adv.id }}</b>
           <p>{{ adv.motivo }}</p>
           <small>
-            Aplicada: {{ adv.criado_em.astimezone().strftime('%d/%m/%Y %H:%M') }}
-            • Expira: {{ adv.expira_em.astimezone().strftime('%d/%m/%Y %H:%M') }}
+            Aplicada: {{ adv.criado_em }}
+            • Expira: {{ adv.expira_em }}
             {% if adv.removida %} • REMOVIDA{% endif %}
           </small>
         </div>
@@ -203,19 +203,19 @@
 
 <section class="content-grid content-grid-2 section-block">
   <article class="card"><div class="section-title"><h2>💰 Últimas Lavagens</h2></div><div class="list">
-  {% for op in lavagens %}<div class="item"><div class="row"><b>{{ op.nome_jogador }} #{{ op.id_jogador }}</b><span class="pill">{{ (op.porcentagem|float)|abs|round|int }}%</span></div><small>R$ {{ "{:,.2f}".format((op.valor or 0)|float).replace(",", "X").replace(".", ",").replace("X", ".") }}</small></div>
+  {% for op in lavagens %}<div class="item"><div class="row"><b>{{ op.nome }} #{{ op.id_game }}</b><span class="pill">{{ op.percentual }}%</span></div><small>R$ {{ op.valor }} • {{ op.data }}</small></div>
   {% else %}<div class="empty-state">Sem lavagens.</div>{% endfor %}</div></article>
 
   <article class="card"><div class="section-title"><h2>🔫 Últimas Ações</h2></div><div class="list">
-  {% for acao in acoes %}<div class="item"><div class="row"><b>{{ acao.tipo }} — {{ acao.resultado }}</b><span class="pill">+{{ acao.pontos }} pts</span></div><small>{{ acao.responsavel or "Responsável não informado" }}</small></div>
+  {% for acao in acoes %}<div class="item"><div class="row"><b>{{ acao.tipo }} — {{ acao.resultado }}</b><span class="pill">+{{ acao.pontos }} pts</span></div><small>{{ acao.responsavel }} • {{ acao.data }}</small></div>
   {% else %}<div class="empty-state">Sem ações.</div>{% endfor %}</div></article>
 
   <article class="card"><div class="section-title"><h2>🚗 Últimos Desmanches</h2></div><div class="list">
-  {% for item in desmanches %}<div class="item"><div class="row"><b>{{ item.modelo }}</b><span class="pill">+{{ item.pontos }} {{ item.destino_pontos }}</span></div><small>R$ {{ "{:,.2f}".format((item.quantidade or 0)|float).replace(",", "X").replace(".", ",").replace("X", ".") }}</small></div>
+  {% for item in desmanches %}<div class="item"><div class="row"><b>{{ item.modelo }}</b><span class="pill">+{{ item.pontos }} {{ item.destino }}</span></div><small>R$ {{ item.valor }} • {{ item.data }}</small></div>
   {% else %}<div class="empty-state">Sem desmanches.</div>{% endfor %}</div></article>
 
   <article class="card"><div class="section-title"><h2>📜 Extrato de Pontos</h2></div><div class="list">
-  {% for item in extrato %}<div class="item"><div class="row"><b>{{ item.descricao }}</b><span class="pill">+{{ item.pontos }}</span></div><small>{{ item.categoria or "—" }}</small></div>
+  {% for item in extrato %}<div class="item"><div class="row"><b>{{ item.descricao }}</b><span class="pill">+{{ item.pontos }}</span></div><small>{{ item.categoria }} • {{ item.data }}</small></div>
   {% else %}<div class="empty-state">Sem pontos registrados.</div>{% endfor %}</div></article>
 </section>
 {% endblock %}
