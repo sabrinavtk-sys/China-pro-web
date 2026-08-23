@@ -784,3 +784,96 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
 .desmanche-ocr-panel{margin-top:12px;padding:12px 14px;border:1px solid rgba(239,46,112,.24);border-radius:10px;background:rgba(239,46,112,.045);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .desmanche-ocr-panel>div{display:grid;gap:4px}.desmanche-ocr-panel small{color:#a79ca4;line-height:1.4}
 @media(max-width:700px){.desmanche-ocr-panel{align-items:stretch;flex-direction:column}.desmanche-ocr-panel button{width:100%}}
+
+
+/* =========================================================
+   ADMIN — RESET GLOBAL DE REGISTROS
+   ========================================================= */
+
+.admin-danger-zone{
+  margin-top:18px!important;
+  border-color:rgba(255,70,90,.28)!important;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,40,70,.035),
+      rgba(11,10,13,.98)
+    )!important;
+}
+
+.reset-warning{
+  margin-bottom:14px;
+  padding:12px 14px;
+  border:1px solid rgba(255,82,102,.28);
+  border-radius:10px;
+  background:rgba(255,62,86,.07);
+  color:#ffabb7;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.admin-reset-grid{
+  display:grid;
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+
+.admin-reset-card{
+  min-height:175px;
+  padding:14px;
+  border:1px solid #302329;
+  border-radius:11px;
+  background:#0d0c10;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.admin-reset-card.reset-all{
+  border-color:rgba(255,67,91,.42);
+  background:rgba(255,50,75,.045);
+}
+
+.admin-reset-card>div{
+  display:grid;
+  gap:6px;
+}
+
+.reset-icon{
+  font-size:22px;
+}
+
+.admin-reset-card b{
+  color:#fff;
+  font-size:13px;
+}
+
+.admin-reset-card p{
+  margin:0;
+  color:#988e95;
+  font-size:10px;
+  line-height:1.5;
+}
+
+.admin-reset-card .admin-btn{
+  width:100%!important;
+}
+
+.reset-modal-card{
+  border-color:rgba(255,67,91,.5)!important;
+}
+
+@media(max-width:1100px){
+  .admin-reset-grid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:650px){
+  .admin-reset-grid{
+    grid-template-columns:1fr;
+  }
+}

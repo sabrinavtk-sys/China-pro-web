@@ -1718,6 +1718,200 @@ def configurar_rotas(app):
         return redirect(url_for("admin_membro", usuario_id=adv.usuario_id))
 
 
+
+    @app.route(
+        "/admin/reset-registros/<categoria>",
+        methods=["POST"],
+    )
+    @login_required
+    @admin_required
+    def admin_reset_registros(categoria):
+        """
+        Reset administrativo global.
+
+        Categorias:
+        - lavagens: apaga todas as operações de lavagem;
+        - acoes: apaga ações e os pontos originados por ações;
+        - desmanches: apaga desmanches e os pontos originados por desmanches;
+        - tudo: apaga as três categorias e seus pontos vinculados.
+
+        Exige confirmação digitada para impedir exclusão acidental.
+        """
+
+        categorias_validas = {
+            "lavagens",
+            "acoes",
+            "desmanches",
+            "tudo",
+        }
+
+        if categoria not in categorias_validas:
+            flash(
+                "Categoria de reset inválida.",
+                "erro",
+            )
+            return redirect(
+                url_for("admin_dashboard")
+            )
+
+        confirmacao = str(
+            request.form.get("confirmacao")
+            or ""
+        ).strip().upper()
+
+        confirmacoes = {
+            "lavagens": "RESETAR LAVAGENS",
+            "acoes": "RESETAR ACOES",
+            "desmanches": "RESETAR DESMANCHES",
+            "tudo": "RESETAR TUDO",
+        }
+
+        esperado = confirmacoes[categoria]
+
+        if confirmacao != esperado:
+            flash(
+                f"Confirmação incorreta. Digite exatamente: {esperado}",
+                "erro",
+            )
+            return redirect(
+                url_for("admin_dashboard")
+            )
+
+        try:
+            apagados_lavagens = 0
+            apagados_acoes = 0
+            apagados_desmanches = 0
+            apagados_pontos = 0
+            apagadas_correcoes = 0
+
+            if categoria in {
+                "lavagens",
+                "tudo",
+            }:
+                apagados_lavagens = (
+                    Operacao.query.delete(
+                        synchronize_session=False
+                    )
+                )
+
+                apagadas_correcoes += (
+                    SolicitacaoCorrecao.query.filter_by(
+                        registro_tipo="lavagem"
+                    ).delete(
+                        synchronize_session=False
+                    )
+                )
+
+            if categoria in {
+                "acoes",
+                "tudo",
+            }:
+                apagados_pontos += (
+                    ExtratoPonto.query.filter_by(
+                        origem_tipo="acao"
+                    ).delete(
+                        synchronize_session=False
+                    )
+                )
+
+                apagados_acoes = (
+                    Acao.query.delete(
+                        synchronize_session=False
+                    )
+                )
+
+                apagadas_correcoes += (
+                    SolicitacaoCorrecao.query.filter_by(
+                        registro_tipo="acao"
+                    ).delete(
+                        synchronize_session=False
+                    )
+                )
+
+            if categoria in {
+                "desmanches",
+                "tudo",
+            }:
+                # Pontos de desmanche podem ter sido destinados
+                # tanto para Ação quanto para Lavagem.
+                apagados_pontos += (
+                    ExtratoPonto.query.filter_by(
+                        origem_tipo="desmanche"
+                    ).delete(
+                        synchronize_session=False
+                    )
+                )
+
+                apagados_desmanches = (
+                    Desmanche.query.delete(
+                        synchronize_session=False
+                    )
+                )
+
+                apagadas_correcoes += (
+                    SolicitacaoCorrecao.query.filter_by(
+                        registro_tipo="desmanche"
+                    ).delete(
+                        synchronize_session=False
+                    )
+                )
+
+            detalhes = (
+                f"Reset global '{categoria}'. "
+                f"Lavagens: {apagados_lavagens}; "
+                f"Ações: {apagados_acoes}; "
+                f"Desmanches: {apagados_desmanches}; "
+                f"Pontos removidos: {apagados_pontos}; "
+                f"Correções removidas: {apagadas_correcoes}."
+            )
+
+            registrar_log_admin(
+                "RESET_GLOBAL_REGISTROS",
+                detalhes=detalhes,
+            )
+
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+
+            logger.exception(
+                "Erro no reset administrativo de registros: %s",
+                categoria,
+            )
+
+            flash(
+                "Não foi possível concluir o reset. Nenhum reset parcial foi confirmado.",
+                "erro",
+            )
+
+            return redirect(
+                url_for("admin_dashboard")
+            )
+
+        nomes = {
+            "lavagens": "Lavagens",
+            "acoes": "Ações",
+            "desmanches": "Desmanches",
+            "tudo": "Lavagens, Ações e Desmanches",
+        }
+
+        flash(
+            (
+                f"Reset concluído: {nomes[categoria]}. "
+                f"Removidos: {apagados_lavagens} lavagens, "
+                f"{apagados_acoes} ações, "
+                f"{apagados_desmanches} desmanches e "
+                f"{apagados_pontos} lançamentos de pontos."
+            ),
+            "sucesso",
+        )
+
+        return redirect(
+            url_for("admin_dashboard")
+        )
+
+
     @app.route("/admin/logs")
     @login_required
     @admin_required

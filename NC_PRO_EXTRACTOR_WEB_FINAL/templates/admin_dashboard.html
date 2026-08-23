@@ -308,6 +308,166 @@
   </article>
 </section>
 
+
+<section class="card section-block admin-danger-zone">
+  <div class="section-title">
+    <div>
+      <span class="kicker">ÁREA DE PERIGO</span>
+      <h2>🧨 Reset geral de registros</h2>
+      <small class="muted">
+        Função exclusiva da administração. O reset afeta todos os usuários do site.
+      </small>
+    </div>
+  </div>
+
+  <div class="reset-warning">
+    ⚠️ Esta função apaga registros permanentemente. Não é possível desfazer pelo painel.
+    Gere um backup antes de utilizar.
+  </div>
+
+  <div class="admin-reset-grid">
+
+    <article class="admin-reset-card">
+      <div>
+        <span class="reset-icon">💰</span>
+        <b>Resetar Lavagens</b>
+        <p>Apaga todas as operações de lavagem de todos os usuários.</p>
+      </div>
+
+      <button
+        type="button"
+        class="admin-btn danger"
+        onclick="abrirResetAdmin(
+          'lavagens',
+          'RESETAR LAVAGENS',
+          'todas as Lavagens'
+        )"
+      >
+        Resetar Lavagens
+      </button>
+    </article>
+
+    <article class="admin-reset-card">
+      <div>
+        <span class="reset-icon">🔫</span>
+        <b>Resetar Ações</b>
+        <p>Apaga todas as Ações e os pontos gerados por elas.</p>
+      </div>
+
+      <button
+        type="button"
+        class="admin-btn danger"
+        onclick="abrirResetAdmin(
+          'acoes',
+          'RESETAR ACOES',
+          'todas as Ações'
+        )"
+      >
+        Resetar Ações
+      </button>
+    </article>
+
+    <article class="admin-reset-card">
+      <div>
+        <span class="reset-icon">🚗</span>
+        <b>Resetar Desmanches</b>
+        <p>Apaga todos os Desmanches e seus pontos de Ação/Lavagem.</p>
+      </div>
+
+      <button
+        type="button"
+        class="admin-btn danger"
+        onclick="abrirResetAdmin(
+          'desmanches',
+          'RESETAR DESMANCHES',
+          'todos os Desmanches'
+        )"
+      >
+        Resetar Desmanches
+      </button>
+    </article>
+
+    <article class="admin-reset-card reset-all">
+      <div>
+        <span class="reset-icon">☢️</span>
+        <b>RESETAR TUDO</b>
+        <p>Apaga Lavagens, Ações, Desmanches e os pontos vinculados.</p>
+      </div>
+
+      <button
+        type="button"
+        class="admin-btn danger"
+        onclick="abrirResetAdmin(
+          'tudo',
+          'RESETAR TUDO',
+          'TODOS os registros'
+        )"
+      >
+        Resetar Tudo
+      </button>
+    </article>
+
+  </div>
+</section>
+
+<div id="modalResetAdmin" class="admin-modal" hidden>
+  <div
+    class="admin-modal-backdrop"
+    onclick="fecharResetAdmin()"
+  ></div>
+
+  <section
+    class="admin-modal-card reset-modal-card"
+    role="dialog"
+    aria-modal="true"
+  >
+    <span class="kicker">RESET ADMINISTRATIVO</span>
+    <h2>⚠️ Confirmação obrigatória</h2>
+
+    <p id="resetAdminDescricao"></p>
+
+    <div class="admin-danger-box">
+      Esta ação é permanente e afeta todos os usuários.
+      Recomendado: gere um Backup JSON antes.
+    </div>
+
+    <form
+      id="formResetAdmin"
+      method="POST"
+    >
+      <label>
+        Digite exatamente:
+        <b id="resetAdminTextoEsperado"></b>
+      </label>
+
+      <input
+        id="resetAdminConfirmacao"
+        type="text"
+        name="confirmacao"
+        autocomplete="off"
+        required
+      >
+
+      <div class="admin-modal-actions">
+        <button
+          class="admin-btn secondary"
+          type="button"
+          onclick="fecharResetAdmin()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          class="admin-btn danger"
+          type="submit"
+        >
+          Confirmar reset
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
 <div id="modalPD" class="admin-modal" hidden>
   <div class="admin-modal-backdrop" onclick="fecharPD()"></div>
 
@@ -362,6 +522,71 @@
 
 {% block scripts %}
 <script>
+
+function abrirResetAdmin(
+  categoria,
+  textoEsperado,
+  descricao
+){
+  const modal =
+    document.getElementById(
+      "modalResetAdmin"
+    );
+
+  const form =
+    document.getElementById(
+      "formResetAdmin"
+    );
+
+  const campo =
+    document.getElementById(
+      "resetAdminConfirmacao"
+    );
+
+  const esperado =
+    document.getElementById(
+      "resetAdminTextoEsperado"
+    );
+
+  const descricaoEl =
+    document.getElementById(
+      "resetAdminDescricao"
+    );
+
+  form.action =
+    `/admin/reset-registros/${categoria}`;
+
+  esperado.textContent =
+    textoEsperado;
+
+  descricaoEl.textContent =
+    `Você está prestes a apagar ${descricao}.`;
+
+  campo.value = "";
+  campo.placeholder =
+    textoEsperado;
+
+  modal.hidden = false;
+
+  setTimeout(
+    () => campo.focus(),
+    30
+  );
+}
+
+
+function fecharResetAdmin(){
+  const modal =
+    document.getElementById(
+      "modalResetAdmin"
+    );
+
+  if(modal){
+    modal.hidden = true;
+  }
+}
+
+
 function abrirPD(id, usuario, nomeGame){
   const modal = document.getElementById("modalPD");
   const form = document.getElementById("formPD");
@@ -388,6 +613,7 @@ function fecharPD(){
 document.addEventListener("keydown", (event) => {
   if(event.key === "Escape"){
     fecharPD();
+    fecharResetAdmin();
   }
 });
 </script>

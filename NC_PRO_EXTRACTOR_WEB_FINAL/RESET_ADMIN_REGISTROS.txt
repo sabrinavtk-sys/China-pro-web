@@ -1,0 +1,27 @@
+CHINA PRO — RESET ADMINISTRATIVO DE REGISTROS
+
+Nova função exclusiva de ADM:
+
+1. RESETAR LAVAGENS
+   - Apaga todas as operações de lavagem.
+   - Remove solicitações de correção ligadas a lavagens.
+
+2. RESETAR AÇÕES
+   - Apaga todas as ações.
+   - Apaga todos os pontos originados por ações.
+   - Remove solicitações de correção ligadas a ações.
+
+3. RESETAR DESMANCHES
+   - Apaga todos os desmanches.
+   - Apaga os pontos originados por desmanches, sejam destinados à Ação ou Lavagem.
+   - Remove solicitações de correção ligadas a desmanches.
+
+4. RESETAR TUDO
+   - Executa os três resets acima.
+
+SEGURANÇA
+- Apenas ADM consegue usar.
+- Cada opção exige uma frase de confirmação específica.
+- A ação fica registrada nos Logs ADM.
+- O painel recomenda gerar Backup JSON antes do reset.
+- Contas, Nome/ID Game, cargos, ADVs, configurações e administradores NÃO são apagados.
