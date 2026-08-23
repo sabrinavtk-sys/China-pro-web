@@ -1,0 +1,8 @@
+CHINA PRO — CALCULADORA EM PÁGINA PRÓPRIA
+
+- Calculadora grande removida do Dashboard.
+- Dashboard possui card/botão Calculadora.
+- Clique abre /calculadora, igual Ação e Desmanche.
+- Página própria mantém limite 20%–40%.
+- Mantidos: Copiar número, Copiar cálculo e Limpar.
+- Adicionado botão Voltar ao Dashboard.

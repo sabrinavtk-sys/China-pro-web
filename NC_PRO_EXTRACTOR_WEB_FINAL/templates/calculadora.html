@@ -12,6 +12,7 @@
       Informe o valor recebido e escolha uma porcentagem entre 20% e 40%.
     </p>
   </div>
+  <a class="btn secondary" href="{{ url_for('dashboard') }}">← Voltar ao Dashboard</a>
 </section>
 
 <section class="china-calc-page-wrap">
@@ -110,5 +111,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-2"></script>
+<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-calcfix3"></script>
 {% endblock %}
