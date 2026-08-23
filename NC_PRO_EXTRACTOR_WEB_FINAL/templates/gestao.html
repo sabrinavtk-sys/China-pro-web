@@ -9,7 +9,15 @@
 
 <section class="profile-hero card">
   <div class="profile-identity"><div class="profile-avatar">{{ (perfil_game.nome_game if perfil_game else current_user.usuario)[:1]|upper }}</div><div><span class="kicker">PERFIL DO MEMBRO</span><h2>{{ perfil_game.nome_game if perfil_game else 'Nome no Game não configurado' }}</h2><p>{% if perfil_game %}ID Game <b>#{{ perfil_game.id_game }}</b>{% else %}Usuário do site: <b>{{ current_user.usuario }}</b>{% endif %}</p></div></div>
-  <div class="profile-tags"><span class="pill">💰 {{ current_user.cargo }}</span>{% if perfil.cargo_acao %}<span class="pill">🔫 {{ perfil.cargo_acao }}</span>{% endif %}</div>
+  <div class="profile-tags">
+    <span class="pill">
+      {% if setor_atual=='lavagem' %}💰 Lavagem
+      {% elif setor_atual=='acao' %}🔫 Ação
+      {% elif setor_atual=='gerencia' %}👑 Gerência
+      {% endif %}
+      • {{ current_user.cargo }}
+    </span>
+  </div>
 </section>
 
 <section class="stats-grid stats-grid-4 section-block">
@@ -20,8 +28,34 @@
 </section>
 
 <section class="content-grid content-grid-2 section-block">
-  <article class="card"><div class="section-title"><div><h2>🎯 Meta de Lavagem</h2><small class="muted">{{ meta_lavagem.cargo }}</small></div></div>{% if meta_lavagem.meta %}<div class="metric-line"><b>{{ meta_lavagem.lavagens }} / {{ meta_lavagem.meta }} lavagens</b><span>{{ meta_lavagem.percentual }}%</span></div><div class="progress"><div style="width:{{ meta_lavagem.percentual }}%"></div></div><p class="muted">{{ meta_lavagem.status }}</p>{% else %}<div class="notice">Cargo sem meta de quantidade para upamento.</div>{% endif %}</article>
-  <article class="card"><div class="section-title"><div><h2>🔫 Meta de Ação</h2><small class="muted">{{ perfil.cargo_acao or 'Sem cargo de Ação' }}</small></div></div>{% if perfil.setor_acao and meta_acao and meta_acao.pontos %}<div class="metric-line"><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b><span>{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%</span></div><div class="progress"><div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div></div><p class="muted">Papéis {{ meta_acao.papeis or '—' }} • Spray {{ meta_acao.spray or '—' }} • R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}</p>{% else %}<div class="notice">Ative o setor de Ação e selecione um cargo com meta para acompanhar aqui.</div>{% endif %}</article>
+  {% if setor_atual == 'lavagem' %}
+  <article class="card">
+    <div class="section-title"><div><h2>🎯 Meta de Lavagem</h2><small class="muted">{{ current_user.cargo }}</small></div></div>
+    {% if meta_lavagem and meta_lavagem.meta %}
+      <div class="metric-line"><b>{{ meta_lavagem.lavagens }} / {{ meta_lavagem.meta }} lavagens</b><span>{{ meta_lavagem.percentual }}%</span></div>
+      <div class="progress"><div style="width:{{ meta_lavagem.percentual }}%"></div></div>
+      <p class="muted">{{ meta_lavagem.status }}</p>
+    {% else %}
+      <div class="notice">Cargo sem meta de quantidade para upamento.</div>
+    {% endif %}
+  </article>
+  {% elif setor_atual == 'acao' %}
+  <article class="card">
+    <div class="section-title"><div><h2>🔫 Meta de Ação</h2><small class="muted">{{ current_user.cargo }}</small></div></div>
+    {% if meta_acao and meta_acao.pontos %}
+      <div class="metric-line"><b>{{ pontos_acao }} / {{ meta_acao.pontos }} pontos</b><span>{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%</span></div>
+      <div class="progress"><div style="width:{{ [100, (pontos_acao/meta_acao.pontos*100)|round]|min }}%"></div></div>
+      <p class="muted">Papéis {{ meta_acao.papeis or '—' }} • Spray {{ meta_acao.spray or '—' }} • R$ {{ "{:,.0f}".format(meta_acao.dinheiro).replace(",", ".") }}</p>
+    {% else %}
+      <div class="notice">Este cargo de Ação ainda não possui meta configurada.</div>
+    {% endif %}
+  </article>
+  {% else %}
+  <article class="card">
+    <div class="section-title"><div><h2>👑 Gerência</h2><small class="muted">{{ current_user.cargo }}</small></div></div>
+    <div class="notice">Gerência é um setor independente de Ação e Lavagem.</div>
+  </article>
+  {% endif %}
 </section>
 
 <section class="grid three section-block rank-position-grid">

@@ -1,0 +1,37 @@
+CHINA PRO — CARGOS ÚNICOS / SETORES SEPARADOS
+
+REGRA NOVA
+- Cada usuário possui exatamente 1 cargo.
+- Lavagem, Ação e Gerência são três setores separados.
+- Não existe mais a opção "Ambos".
+
+LAVAGEM
+- Funcionário
+- Vendedor
+- Financista
+- Contador
+- Doleiro
+
+AÇÃO
+- Lanterninha
+- Olheiro
+- Cobrador
+- Soldado
+- Capanga
+- Tenente de Rua
+
+GERÊNCIA
+- Sub Gerente
+- Chefe de Setor
+- Alto Conselho
+
+ALTERAÇÃO DE CARGO
+- Apenas a administração altera cargo/setor.
+- Ao mudar de setor, o cargo anterior deixa de ser o cargo ativo.
+- O painel ADM sempre mostra um único cargo.
+
+COMPATIBILIDADE COM CONTAS ANTIGAS
+- Contas antigas de Ação/Gerência que estavam salvas como
+  "Funcionário + cargo_acao" são migradas automaticamente.
+- O cargo real de Ação/Gerência passa a ser o único cargo do usuário.
+- Gerência não é mais tratada como Ação.

@@ -25,6 +25,7 @@
       <a class="{% if request.endpoint=='acoes' %}active{% endif %}" href="{{ url_for('acoes') }}">🔫 <span>Ações</span></a>
       <a class="{% if request.endpoint=='desmanches' %}active{% endif %}" href="{{ url_for('desmanches') }}">🚗 <span>Desmanches</span></a>
       <a class="{% if request.endpoint=='ranking' %}active{% endif %}" href="{{ url_for('ranking') }}">🏆 <span>Ranking</span></a>
+      <a class="{% if request.endpoint=='calculadora' %}active{% endif %}" href="{{ url_for('calculadora') }}">🧮 <span>Calculadora</span></a>
       <a class="{% if request.endpoint=='notificacoes' %}active{% endif %}" href="{{ url_for('notificacoes') }}">🔔 <span>Notificações{% if notificacoes_nao_lidas %} ({{ notificacoes_nao_lidas }}){% endif %}</span></a>
       <a class="{% if request.endpoint=='perfil_setores' %}active{% endif %}" href="{{ url_for('perfil_setores') }}">♛ <span>Metas e Cargos</span></a>
       <a class="{% if request.endpoint=='historico_geral' %}active{% endif %}" href="{{ url_for('historico_geral') }}">▣ <span>Histórico Geral</span></a>

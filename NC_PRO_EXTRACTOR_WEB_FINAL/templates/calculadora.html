@@ -1,0 +1,176 @@
+{% extends "base_gestao.html" %}
+
+{% block title %}Calculadora — China PRO{% endblock %}
+{% block page_heading %}Calculadora{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <div>
+    <span class="kicker">CHINA PRO</span>
+    <h2>🧮 Calculadora de Lavagem</h2>
+    <p class="muted">
+      Calcule rapidamente o valor enviado e o ganho da operação.
+      A porcentagem aceita é de 20% até 40%.
+    </p>
+  </div>
+</section>
+
+<section class="calculator-layout">
+
+  <article class="card calculator-card">
+
+    <div class="section-title">
+      <div>
+        <span class="kicker">VALOR DA OPERAÇÃO</span>
+        <h2>Calcular porcentagem</h2>
+      </div>
+    </div>
+
+    <div class="calculator-field">
+      <label for="calcValor">
+        Valor original / recebido
+      </label>
+
+      <div class="money-input">
+        <span>R$</span>
+        <input
+          id="calcValor"
+          type="text"
+          inputmode="numeric"
+          placeholder="Ex.: 1.000.000"
+          autocomplete="off"
+        >
+      </div>
+    </div>
+
+    <div class="calculator-field">
+      <div class="calculator-label-row">
+        <label for="calcPorcentagem">
+          Porcentagem
+        </label>
+
+        <strong id="calcPorcentagemTexto">
+          25%
+        </strong>
+      </div>
+
+      <input
+        id="calcPorcentagem"
+        class="calculator-range"
+        type="range"
+        min="20"
+        max="40"
+        step="1"
+        value="25"
+      >
+
+      <div class="calculator-range-labels">
+        <span>20%</span>
+        <span>40%</span>
+      </div>
+
+      <div class="calculator-presets">
+        <button type="button" data-percentual="20">20%</button>
+        <button type="button" data-percentual="25" class="active">25%</button>
+        <button type="button" data-percentual="30">30%</button>
+        <button type="button" data-percentual="35">35%</button>
+        <button type="button" data-percentual="40">40%</button>
+      </div>
+    </div>
+
+    <div class="calculator-results">
+
+      <div class="calculator-result main">
+        <span>Valor a enviar</span>
+        <strong id="calcEnviar">
+          R$ 0,00
+        </strong>
+        <small>
+          Valor que sobra após retirar a porcentagem.
+        </small>
+      </div>
+
+      <div class="calculator-result">
+        <span>Valor da porcentagem</span>
+        <strong id="calcGanho">
+          R$ 0,00
+        </strong>
+      </div>
+
+      <div class="calculator-result">
+        <span>Valor original</span>
+        <strong id="calcOriginal">
+          R$ 0,00
+        </strong>
+      </div>
+
+      <div class="calculator-result">
+        <span>Taxa aplicada</span>
+        <strong id="calcTaxa">
+          25%
+        </strong>
+      </div>
+
+    </div>
+
+    <div class="calculator-actions">
+      <button
+        type="button"
+        id="calcCopiar"
+      >
+        📋 Copiar cálculo
+      </button>
+
+      <button
+        type="button"
+        id="calcLimpar"
+        class="btn secondary"
+      >
+        🧹 Limpar
+      </button>
+    </div>
+
+    <div
+      id="calcStatus"
+      class="calculator-status"
+      aria-live="polite"
+    ></div>
+
+  </article>
+
+  <aside class="card calculator-help">
+    <span class="kicker">REGRA</span>
+    <h2>20% a 40%</h2>
+
+    <div class="calculator-rule">
+      <b>Valor recebido</b>
+      <span>R$ 1.000.000</span>
+    </div>
+
+    <div class="calculator-rule">
+      <b>Porcentagem</b>
+      <span>25%</span>
+    </div>
+
+    <div class="calculator-rule highlight">
+      <b>Ganho</b>
+      <span>R$ 250.000</span>
+    </div>
+
+    <div class="calculator-rule">
+      <b>Valor enviado</b>
+      <span>R$ 750.000</span>
+    </div>
+
+    <div class="notice">
+      A calculadora não permite porcentagem menor que
+      <b>20%</b> nem maior que <b>40%</b>.
+    </div>
+  </aside>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-1"></script>
+{% endblock %}

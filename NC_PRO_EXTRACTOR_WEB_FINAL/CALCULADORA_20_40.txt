@@ -1,0 +1,19 @@
+CHINA PRO — CALCULADORA
+
+Nova aba: Calculadora
+
+Funções:
+- Valor original/recebido.
+- Porcentagem limitada entre 20% e 40%.
+- Botões rápidos: 20%, 25%, 30%, 35% e 40%.
+- Calcula automaticamente o valor da porcentagem.
+- Calcula automaticamente o valor a enviar.
+- Copia o cálculo em texto.
+- Botão Limpar.
+- Responsiva para celular/notebook.
+
+Exemplo:
+Valor original: R$ 1.000.000
+Taxa: 25%
+Ganho: R$ 250.000
+Valor enviado: R$ 750.000

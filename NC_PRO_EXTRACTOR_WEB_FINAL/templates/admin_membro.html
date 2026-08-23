@@ -16,7 +16,7 @@
 <section class="stats-grid stats-grid-3">
   <article class="card stat"><span>Pontos Ação</span><strong>{{ pontos_acao }}</strong></article>
   <article class="card stat"><span>Pontos Lavagem</span><strong>{{ pontos_lavagem }}</strong></article>
-  <article class="card stat"><span>Cargo</span><strong class="stat-cargo">{% if perfil and perfil.setor_acao and perfil.cargo_acao %}{{ perfil.cargo_acao }}{% else %}{{ membro.cargo }}{% endif %}</strong></article>
+  <article class="card stat"><span>Cargo único</span><strong class="stat-cargo">{{ membro.cargo }}</strong></article>
 </section>
 
 
@@ -127,6 +127,7 @@
 <section class="card section-block">
   <span class="kicker">ORGANIZAÇÃO</span>
   <h2>♛ Alterar setor e cargo</h2>
+  <div class="notice">Cada membro pode possuir <b>apenas um cargo</b>. Lavagem, Ação e Gerência são setores separados.</div>
 
   <form
     method="POST"
@@ -136,10 +137,9 @@
       <div>
         <label>Setor</label>
         <select name="setor">
-          <option value="lavagem">💰 Lavagem</option>
-          <option value="acao">🔫 Ação</option>
-          <option value="gerencia">👑 Gerência</option>
-          <option value="ambos">💰 + 🔫 Ambos</option>
+          <option value="lavagem" {% if setor_membro=='lavagem' %}selected{% endif %}>💰 Lavagem</option>
+          <option value="acao" {% if setor_membro=='acao' %}selected{% endif %}>🔫 Ação</option>
+          <option value="gerencia" {% if setor_membro=='gerencia' %}selected{% endif %}>👑 Gerência</option>
         </select>
       </div>
 
@@ -163,7 +163,7 @@
           {% for cargo in cargos_acao %}
           <option
             value="{{ cargo }}"
-            {% if perfil and perfil.cargo_acao == cargo %}selected{% endif %}
+            {% if membro.cargo == cargo %}selected{% endif %}
           >
             {{ cargo }}
           </option>
@@ -172,7 +172,7 @@
           {% for cargo in cargos_gerencia %}
           <option
             value="{{ cargo }}"
-            {% if perfil and perfil.cargo_acao == cargo %}selected{% endif %}
+            {% if membro.cargo == cargo %}selected{% endif %}
           >
             {{ cargo }} (Gerência)
           </option>
@@ -186,7 +186,7 @@
           {% for cargo in cargos_gerencia %}
           <option
             value="{{ cargo }}"
-            {% if perfil and perfil.cargo_acao == cargo %}selected{% endif %}
+            {% if membro.cargo == cargo %}selected{% endif %}
           >
             {{ cargo }}
           </option>

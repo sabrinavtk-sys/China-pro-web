@@ -190,11 +190,11 @@
           </td>
 
           <td>
-            {% if item.perfil and item.perfil.setor_acao and item.perfil.cargo_acao %}
-              {{ item.perfil.cargo_acao }}
-            {% else %}
-              {{ item.usuario.cargo }}
+            {% if item.setor_exibicao == 'lavagem' %}💰 Lavagem
+            {% elif item.setor_exibicao == 'acao' %}🔫 Ação
+            {% elif item.setor_exibicao == 'gerencia' %}👑 Gerência
             {% endif %}
+            • <b>{{ item.usuario.cargo }}</b>
           </td>
 
           <td>

@@ -60,6 +60,99 @@ CARGOS_GERENCIA = [
     "Alto Conselho",
 ]
 
+
+TODOS_CARGOS = (
+    ORDEM_CARGOS
+    + CARGOS_ACAO_CADASTRO
+    + CARGOS_GERENCIA
+)
+
+
+def setor_do_cargo(cargo):
+    """
+    Retorna exatamente um setor para exatamente um cargo.
+    """
+    if cargo in CARGOS:
+        return "lavagem"
+
+    if cargo in CARGOS_ACAO_CADASTRO:
+        return "acao"
+
+    if cargo in CARGOS_GERENCIA:
+        return "gerencia"
+
+    return None
+
+
+def sincronizar_perfil_cargo_unico(usuario, perfil=None):
+    """
+    Mantém PerfilSetor compatível com a base antiga,
+    mas Usuario.cargo é a única fonte oficial do cargo.
+
+    Regras:
+    - Lavagem: setor_lavagem=True, setor_acao=False
+    - Ação: setor_lavagem=False, setor_acao=True
+    - Gerência: setor_lavagem=False, setor_acao=False
+    - Nunca ambos.
+    """
+    if perfil is None:
+        perfil = PerfilSetor.query.filter_by(
+            usuario_id=usuario.id
+        ).first()
+
+    if perfil is None:
+        perfil = PerfilSetor(
+            usuario_id=usuario.id,
+            setor_lavagem=False,
+            setor_acao=False,
+            cargo_acao=None,
+            impulsos_acao=0,
+            impulsos_lavagem=0,
+        )
+        db.session.add(perfil)
+
+    # Migração automática da estrutura antiga:
+    # contas de Ação/Gerência eram salvas como "Funcionário"
+    # em Usuario.cargo e o cargo real ficava em perfil.cargo_acao.
+    cargo_legado = (
+        perfil.cargo_acao
+        if perfil.cargo_acao in (
+            CARGOS_ACAO_CADASTRO
+            + CARGOS_GERENCIA
+        )
+        else None
+    )
+
+    if (
+        cargo_legado
+        and perfil.setor_acao
+        and usuario.cargo in CARGOS
+    ):
+        usuario.cargo = cargo_legado
+
+    setor = setor_do_cargo(
+        usuario.cargo
+    )
+
+    perfil.setor_lavagem = (
+        setor == "lavagem"
+    )
+
+    perfil.setor_acao = (
+        setor == "acao"
+    )
+
+    # Compatibilidade apenas para telas antigas de Ação.
+    # Gerência é separada e não usa cargo_acao.
+    perfil.cargo_acao = (
+        usuario.cargo
+        if setor == "acao"
+        else None
+    )
+
+    return perfil
+
+
 METAS_ORGANIZACAO = {
  "Funcionário":{"normal":(100,100,5000000),"1":(80,80,4000000),"2":(50,50,2500000)},
  "Vendedor":{"normal":(90,90,4500000),"1":(72,72,3600000),"2":(45,45,2225000)},
@@ -147,10 +240,15 @@ def periodo_semana(referencia=None):
 
 
 def garantir_cargo_valido(usuario):
-    if usuario.cargo not in CARGOS:
-        usuario.cargo = "Funcionário"
-        return True
-    return False
+    """
+    Valida qualquer cargo oficial.
+    Não converte cargos de Ação/Gerência para Funcionário.
+    """
+    if usuario.cargo in TODOS_CARGOS:
+        return False
+
+    usuario.cargo = "Funcionário"
+    return True
 
 
 def obter_meta_semana(usuario_id, criar=True):
@@ -176,10 +274,18 @@ def obter_meta_semana(usuario_id, criar=True):
 
 
 def resumo_meta_semanal(usuario):
-    registro, inicio_local, fim_local = obter_meta_semana(usuario.id, criar=True)
+    registro, inicio_local, fim_local = obter_meta_semana(
+        usuario.id,
+        criar=True,
+    )
 
-    inicio_utc = inicio_local.astimezone(timezone.utc)
-    fim_utc = fim_local.astimezone(timezone.utc)
+    inicio_utc = inicio_local.astimezone(
+        timezone.utc
+    )
+
+    fim_utc = fim_local.astimezone(
+        timezone.utc
+    )
 
     lavagens = Operacao.query.filter(
         Operacao.usuario_id == usuario.id,
@@ -187,29 +293,115 @@ def resumo_meta_semanal(usuario):
         Operacao.criado_em < fim_utc,
     ).count()
 
-    meta = CARGOS.get(usuario.cargo)
-    meta_entregue = bool(registro.meta_entregue)
-    impulsos = registro.impulsos if registro.impulsos in (0,1,2) else 0
-    meta_org = meta_organizacao(usuario.cargo, impulsos)
+    setor = setor_do_cargo(
+        usuario.cargo
+    )
+
+    # Apenas cargos de Lavagem possuem meta de Lavagem.
+    if setor != "lavagem":
+        return {
+            "cargo": usuario.cargo,
+            "setor": setor,
+            "meta": None,
+            "lavagens": lavagens,
+            "faltam": 0,
+            "percentual": 0,
+            "meta_entregue": False,
+            "impulsos": 0,
+            "meta_org": {
+                "papeis": 0,
+                "spray": 0,
+                "sujo": 0,
+            },
+            "funcao": "",
+            "apto": False,
+            "status": (
+                "Cargo pertencente ao setor de "
+                + (
+                    "Ação"
+                    if setor == "acao"
+                    else "Gerência"
+                    if setor == "gerencia"
+                    else "não definido"
+                )
+            ),
+            "inicio": inicio_local,
+            "fim_exclusivo": fim_local,
+            "fim_exibicao": (
+                fim_local
+                - timedelta(minutes=1)
+            ),
+        }
+
+    meta = CARGOS.get(
+        usuario.cargo
+    )
+
+    meta_entregue = bool(
+        registro.meta_entregue
+    )
+
+    impulsos = (
+        registro.impulsos
+        if registro.impulsos in (0, 1, 2)
+        else 0
+    )
+
+    meta_org = meta_organizacao(
+        usuario.cargo,
+        impulsos,
+    )
 
     if meta is None:
         faltam = 0
         percentual = 100
         apto = False
         status = "Possível convite para Gerência"
+
     else:
-        faltam = max(meta - lavagens, 0)
-        percentual = min(round((lavagens / meta) * 100), 100) if meta else 100
-        apto = lavagens >= meta and meta_entregue
+        faltam = max(
+            meta - lavagens,
+            0,
+        )
+
+        percentual = (
+            min(
+                round(
+                    (
+                        lavagens
+                        / meta
+                    )
+                    * 100
+                ),
+                100,
+            )
+            if meta
+            else 100
+        )
+
+        apto = (
+            lavagens >= meta
+            and meta_entregue
+        )
+
         if apto:
             status = "Apto para upamento"
-        elif lavagens >= meta and not meta_entregue:
-            status = "Quantidade atingida — falta entregar a meta"
+        elif (
+            lavagens >= meta
+            and not meta_entregue
+        ):
+            status = (
+                "Quantidade atingida — "
+                "falta entregar a meta"
+            )
         else:
-            status = f"Faltam {faltam} lavagens"
+            status = (
+                f"Faltam {faltam} lavagens"
+            )
 
     return {
         "cargo": usuario.cargo,
+        "setor": setor,
         "meta": meta,
         "lavagens": lavagens,
         "faltam": faltam,
@@ -217,12 +409,18 @@ def resumo_meta_semanal(usuario):
         "meta_entregue": meta_entregue,
         "impulsos": impulsos,
         "meta_org": meta_org,
-        "funcao": FUNCOES_CARGOS.get(usuario.cargo, ""),
+        "funcao": FUNCOES_CARGOS.get(
+            usuario.cargo,
+            "",
+        ),
         "apto": apto,
         "status": status,
         "inicio": inicio_local,
         "fim_exclusivo": fim_local,
-        "fim_exibicao": fim_local - timedelta(minutes=1),
+        "fim_exibicao": (
+            fim_local
+            - timedelta(minutes=1)
+        ),
     }
 
 
@@ -684,12 +882,16 @@ def configurar_rotas(app):
         if usuario_existente:
             return render_template("cadastro.html", cargos_lavagem=ORDEM_CARGOS, cargos_acao=CARGOS_ACAO_CADASTRO, cargos_gerencia=CARGOS_GERENCIA, erro="Este usuário já existe.")
 
+        cargo_unico = (
+            cargo_lavagem
+            if setor_cadastro == "lavagem"
+            else cargo_acao
+        )
+
         novo_usuario = Usuario(
             usuario=usuario,
             senha=bcrypt.generate_password_hash(senha).decode("utf-8"),
-            # Mantém compatibilidade com o sistema antigo de Lavagem.
-            # Para contas de Ação, o cargo real fica em PerfilSetor.
-            cargo=cargo_lavagem if setor_cadastro == "lavagem" else "Funcionário",
+            cargo=cargo_unico,
         )
         try:
             db.session.add(novo_usuario)
@@ -697,13 +899,19 @@ def configurar_rotas(app):
 
             perfil = PerfilSetor(
                 usuario_id=novo_usuario.id,
-                setor_lavagem=(setor_cadastro == "lavagem"),
-                setor_acao=(setor_cadastro in ("acao", "gerencia")),
-                cargo_acao=cargo_acao if setor_cadastro in ("acao", "gerencia") else None,
+                setor_lavagem=False,
+                setor_acao=False,
+                cargo_acao=None,
                 impulsos_acao=0,
                 impulsos_lavagem=0,
             )
+
             db.session.add(perfil)
+
+            sincronizar_perfil_cargo_unico(
+                novo_usuario,
+                perfil,
+            )
 
             db.session.commit()
         except IntegrityError:
@@ -994,10 +1202,34 @@ def configurar_rotas(app):
 
         membros = []
 
+        houve_migracao_cargos = False
+
         for usuario in usuarios:
             perfil = PerfilSetor.query.filter_by(
                 usuario_id=usuario.id
             ).first()
+
+            cargo_antes = usuario.cargo
+            cargo_secundario_antes = (
+                perfil.cargo_acao
+                if perfil
+                else None
+            )
+
+            perfil = sincronizar_perfil_cargo_unico(
+                usuario,
+                perfil,
+            )
+
+            if (
+                usuario.cargo != cargo_antes
+                or (
+                    perfil
+                    and perfil.cargo_acao
+                    != cargo_secundario_antes
+                )
+            ):
+                houve_migracao_cargos = True
 
             perfil_game = obter_perfil_game(usuario.id)
             adv_ativas = advertencias_ativas(usuario.id)
@@ -1036,15 +1268,10 @@ def configurar_rotas(app):
             ).scalar()
 
             cargo = usuario.cargo
-            setor = "lavagem"
-
-            if perfil and perfil.setor_acao:
-                cargo = perfil.cargo_acao or cargo
-                setor = (
-                    "gerencia"
-                    if cargo in CARGOS_GERENCIA
-                    else "acao"
-                )
+            setor = (
+                setor_do_cargo(cargo)
+                or "lavagem"
+            )
 
             texto_busca = " ".join([
                 usuario.usuario or "",
@@ -1081,6 +1308,15 @@ def configurar_rotas(app):
                 "setor_exibicao": setor,
                 "cargo_exibicao": cargo,
             })
+
+        if houve_migracao_cargos:
+            try:
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                logger.exception(
+                    "Erro ao consolidar cargos únicos no painel ADM."
+                )
 
         total_membros = Usuario.query.filter(
             Usuario.is_admin.is_(False)
@@ -1490,103 +1726,173 @@ def configurar_rotas(app):
     @login_required
     @admin_required
     def admin_alterar_cargo_setor(usuario_id):
-        membro = db.session.get(Usuario, usuario_id)
+        membro = db.session.get(
+            Usuario,
+            usuario_id,
+        )
 
         if membro is None:
-            flash("Membro não encontrado.", "erro")
-            return redirect(url_for("admin_dashboard"))
-
-        if getattr(membro, "is_admin", False):
-            flash("Não altere cargo/setor de uma conta ADM por esta tela.", "erro")
-            return redirect(url_for("admin_membro", usuario_id=membro.id))
-
-        setor = limpar_texto(request.form.get("setor"), 30)
-        perfil = PerfilSetor.query.filter_by(usuario_id=membro.id).first()
-
-        if perfil is None:
-            perfil = PerfilSetor(
-                usuario_id=membro.id,
-                setor_lavagem=False,
-                setor_acao=False,
-                cargo_acao=None,
-                impulsos_acao=0,
-                impulsos_lavagem=0,
+            flash(
+                "Membro não encontrado.",
+                "erro",
             )
-            db.session.add(perfil)
+            return redirect(
+                url_for("admin_dashboard")
+            )
 
-        anterior = f"{membro.cargo} / {perfil.cargo_acao or '-'}"
+        if getattr(
+            membro,
+            "is_admin",
+            False,
+        ):
+            flash(
+                "Não altere cargo/setor de uma conta ADM por esta tela.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_membro",
+                    usuario_id=membro.id,
+                )
+            )
+
+        setor = limpar_texto(
+            request.form.get("setor"),
+            30,
+        )
 
         if setor == "lavagem":
-            cargo = limpar_texto(request.form.get("cargo_lavagem"), 30)
+            cargo = limpar_texto(
+                request.form.get(
+                    "cargo_lavagem"
+                ),
+                60,
+            )
+
             if cargo not in CARGOS:
-                flash("Cargo de Lavagem inválido.", "erro")
-                return redirect(url_for("admin_membro", usuario_id=membro.id))
-            membro.cargo = cargo
-            perfil.setor_lavagem = True
-            perfil.setor_acao = False
-            perfil.cargo_acao = None
+                flash(
+                    "Cargo de Lavagem inválido.",
+                    "erro",
+                )
+                return redirect(
+                    url_for(
+                        "admin_membro",
+                        usuario_id=membro.id,
+                    )
+                )
 
         elif setor == "acao":
-            cargo = limpar_texto(request.form.get("cargo_acao"), 60)
+            cargo = limpar_texto(
+                request.form.get(
+                    "cargo_acao"
+                ),
+                60,
+            )
+
             if cargo not in CARGOS_ACAO_CADASTRO:
-                flash("Cargo de Ação inválido.", "erro")
-                return redirect(url_for("admin_membro", usuario_id=membro.id))
-            perfil.setor_lavagem = False
-            perfil.setor_acao = True
-            perfil.cargo_acao = cargo
+                flash(
+                    "Cargo de Ação inválido.",
+                    "erro",
+                )
+                return redirect(
+                    url_for(
+                        "admin_membro",
+                        usuario_id=membro.id,
+                    )
+                )
 
         elif setor == "gerencia":
-            cargo = limpar_texto(request.form.get("cargo_gerencia"), 60)
+            cargo = limpar_texto(
+                request.form.get(
+                    "cargo_gerencia"
+                ),
+                60,
+            )
+
             if cargo not in CARGOS_GERENCIA:
-                flash("Cargo de Gerência inválido.", "erro")
-                return redirect(url_for("admin_membro", usuario_id=membro.id))
-            perfil.setor_lavagem = False
-            perfil.setor_acao = True
-            perfil.cargo_acao = cargo
-
-        elif setor == "ambos":
-            cargo_lavagem = limpar_texto(request.form.get("cargo_lavagem"), 30)
-            cargo_acao = limpar_texto(request.form.get("cargo_acao"), 60)
-
-            if cargo_lavagem not in CARGOS:
-                flash("Cargo de Lavagem inválido.", "erro")
-                return redirect(url_for("admin_membro", usuario_id=membro.id))
-
-            if cargo_acao not in CARGOS_ACAO_CADASTRO and cargo_acao not in CARGOS_GERENCIA:
-                flash("Cargo de Ação/Gerência inválido.", "erro")
-                return redirect(url_for("admin_membro", usuario_id=membro.id))
-
-            membro.cargo = cargo_lavagem
-            perfil.setor_lavagem = True
-            perfil.setor_acao = True
-            perfil.cargo_acao = cargo_acao
+                flash(
+                    "Cargo de Gerência inválido.",
+                    "erro",
+                )
+                return redirect(
+                    url_for(
+                        "admin_membro",
+                        usuario_id=membro.id,
+                    )
+                )
 
         else:
-            flash("Setor inválido.", "erro")
-            return redirect(url_for("admin_membro", usuario_id=membro.id))
+            flash(
+                "Setor inválido. Cada membro deve pertencer a apenas um setor.",
+                "erro",
+            )
+            return redirect(
+                url_for(
+                    "admin_membro",
+                    usuario_id=membro.id,
+                )
+            )
+
+        cargo_anterior = (
+            membro.cargo
+        )
+
+        membro.cargo = cargo
+
+        perfil = sincronizar_perfil_cargo_unico(
+            membro
+        )
 
         registrar_log_admin(
             "ALTERAR_CARGO_SETOR",
             membro.id,
-            f"Antes: {anterior}. Depois: {membro.cargo} / {perfil.cargo_acao or '-'}.",
+            (
+                f"Cargo anterior: {cargo_anterior}. "
+                f"Novo setor: {setor}. "
+                f"Novo cargo único: {cargo}."
+            ),
         )
 
         criar_notificacao(
             membro.id,
-            "Cargo/Setor atualizado",
-            f"Seu cargo/setor foi atualizado pela administração para {membro.cargo} / {perfil.cargo_acao or '-'}.",
+            "Cargo atualizado",
+            (
+                f"Seu cargo foi atualizado pela administração "
+                f"para {cargo} ({setor})."
+            ),
             "info",
         )
 
         try:
             db.session.commit()
+
         except SQLAlchemyError:
             db.session.rollback()
-            flash("Não foi possível alterar cargo/setor.", "erro")
-            return redirect(url_for("admin_membro", usuario_id=membro.id))
 
-        flash("Cargo e setor atualizados.", "sucesso")
-        return redirect(url_for("admin_membro", usuario_id=membro.id))
+            flash(
+                "Não foi possível alterar o cargo.",
+                "erro",
+            )
+
+            return redirect(
+                url_for(
+                    "admin_membro",
+                    usuario_id=membro.id,
+                )
+            )
+
+        flash(
+            f"Cargo atualizado: {cargo}. O membro agora possui apenas este cargo.",
+            "sucesso",
+        )
+
+        return redirect(
+            url_for(
+                "admin_membro",
+                usuario_id=membro.id,
+            )
+        )
+
 
 
     @app.route(
@@ -1976,6 +2282,13 @@ def configurar_rotas(app):
                 usuario_id=usuario.id
             ).first()
 
+            perfil = sincronizar_perfil_cargo_unico(
+                usuario,
+                perfil,
+            )
+
+            db.session.flush()
+
             perfil_game = obter_perfil_game(
                 usuario.id
             )
@@ -2216,6 +2529,9 @@ def configurar_rotas(app):
                 cargos_lavagem=ORDEM_CARGOS,
                 cargos_acao=CARGOS_ACAO_CADASTRO,
                 cargos_gerencia=CARGOS_GERENCIA,
+                setor_membro=setor_do_cargo(
+                    usuario.cargo
+                ),
             )
 
         except SQLAlchemyError:
@@ -2248,41 +2564,94 @@ def configurar_rotas(app):
         registro_meta, _, _ = obter_meta_semana(current_user.id, criar=True)
 
         if request.method == "POST":
-            cargo_novo = limpar_texto(request.form.get("cargo"), 30)
-            meta_entregue = request.form.get("meta_entregue") == "1"
-            try: impulsos = int(request.form.get("impulsos", "0"))
-            except (TypeError, ValueError): impulsos = 0
-            if impulsos not in (0,1,2): impulsos = 0
+            setor_atual = (
+                setor_do_cargo(
+                    current_user.cargo
+                )
+            )
 
-            if cargo_novo not in CARGOS:
-                flash("Selecione um cargo válido.", "erro")
-                return redirect(url_for("configuracoes"))
+            # Cargo é administrativo. O usuário nunca cria
+            # uma combinação de setores pela própria configuração.
+            if setor_atual != "lavagem":
+                flash(
+                    "Seu cargo é gerenciado pela administração.",
+                    "info",
+                )
+                return redirect(
+                    url_for("configuracoes")
+                )
 
-            cargo_anterior = current_user.cargo
-            houve_promocao = (
-                cargo_anterior in ORDEM_CARGOS
-                and ORDEM_CARGOS.index(cargo_novo) > ORDEM_CARGOS.index(cargo_anterior)
+            meta_entregue = (
+                request.form.get(
+                    "meta_entregue"
+                )
+                == "1"
             )
 
             try:
-                current_user.cargo = cargo_novo
-                registro_meta.meta_entregue = meta_entregue
+                impulsos = int(
+                    request.form.get(
+                        "impulsos",
+                        "0",
+                    )
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                impulsos = 0
+
+            if impulsos not in (
+                0,
+                1,
+                2,
+            ):
+                impulsos = 0
+
+            try:
+                registro_meta.meta_entregue = (
+                    meta_entregue
+                )
                 registro_meta.impulsos = impulsos
                 db.session.commit()
+
             except SQLAlchemyError:
                 db.session.rollback()
-                logger.exception("Erro ao salvar configurações do usuário %s.", current_user.id)
-                flash("Não foi possível salvar as configurações.", "erro")
-                return redirect(url_for("configuracoes"))
 
-            if houve_promocao:
-                mensagem = MENSAGENS_PROMOCAO.get(cargo_novo, "Parabéns pela promoção! Continue evoluindo junto com sua equipe.")
-                flash(f"🎉 {mensagem}", "promocao")
-            else:
-                flash("Configurações salvas com sucesso.", "sucesso")
-            return redirect(url_for("dashboard" if houve_promocao else "configuracoes"))
+                logger.exception(
+                    "Erro ao salvar configurações do usuário %s.",
+                    current_user.id,
+                )
 
-        progresso = resumo_meta_semanal(current_user)
+                flash(
+                    "Não foi possível salvar as configurações.",
+                    "erro",
+                )
+
+                return redirect(
+                    url_for("configuracoes")
+                )
+
+            flash(
+                "Configurações salvas com sucesso.",
+                "sucesso",
+            )
+
+            return redirect(
+                url_for("configuracoes")
+            )
+
+        setor_atual = setor_do_cargo(
+            current_user.cargo
+        )
+
+        progresso = (
+            resumo_meta_semanal(
+                current_user
+            )
+            if setor_atual == "lavagem"
+            else None
+        )
         perfil_game = obter_perfil_game(current_user.id)
         solicitacao_perfil = obter_solicitacao_perfil_pendente(current_user.id)
         historico_solicitacoes = SolicitacaoPerfilGame.query.filter_by(
@@ -2295,6 +2664,7 @@ def configurar_rotas(app):
             "configuracoes.html",
             cargos=ORDEM_CARGOS,
             metas=CARGOS,
+            setor_atual=setor_atual,
             progresso=progresso,
             perfil_game=perfil_game,
             solicitacao_perfil=solicitacao_perfil,
@@ -2589,17 +2959,55 @@ def fingerprint(*partes):
 
 
 def obter_perfil(usuario_id, criar=True):
-    perfil = PerfilSetor.query.filter_by(usuario_id=usuario_id).first()
+    perfil = PerfilSetor.query.filter_by(
+        usuario_id=usuario_id
+    ).first()
+
+    usuario = db.session.get(
+        Usuario,
+        usuario_id,
+    )
+
     if perfil is None and criar:
         perfil = PerfilSetor(
             usuario_id=usuario_id,
-            setor_lavagem=True,
+            setor_lavagem=False,
             setor_acao=False,
+            cargo_acao=None,
             impulsos_lavagem=0,
             impulsos_acao=0,
         )
         db.session.add(perfil)
-        db.session.commit()
+
+    if (
+        perfil is not None
+        and usuario is not None
+    ):
+        cargo_antes = usuario.cargo
+        perfil_cargo_antes = perfil.cargo_acao
+        setor_lavagem_antes = perfil.setor_lavagem
+        setor_acao_antes = perfil.setor_acao
+
+        sincronizar_perfil_cargo_unico(
+            usuario,
+            perfil,
+        )
+
+        if (
+            usuario.cargo != cargo_antes
+            or perfil.cargo_acao != perfil_cargo_antes
+            or perfil.setor_lavagem != setor_lavagem_antes
+            or perfil.setor_acao != setor_acao_antes
+        ):
+            try:
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                logger.exception(
+                    "Erro ao migrar cargo único do usuário %s.",
+                    usuario_id,
+                )
+
     return perfil
 
 
@@ -2668,13 +3076,33 @@ def configurar_rotas_gestao(app):
             Desmanche.data_hora >= inicio,
         ).count()
 
+        setor_atual = (
+            setor_do_cargo(
+                current_user.cargo
+            )
+        )
+
         meta_acao = None
-        if perfil.cargo_acao in METAS_ACAO:
-            meta_acao = METAS_ACAO[perfil.cargo_acao][
-                perfil.impulsos_acao if perfil.impulsos_acao in (0, 1, 2) else 0
+
+        if (
+            setor_atual == "acao"
+            and current_user.cargo in METAS_ACAO
+        ):
+            meta_acao = METAS_ACAO[
+                current_user.cargo
+            ][
+                perfil.impulsos_acao
+                if perfil.impulsos_acao in (0, 1, 2)
+                else 0
             ]
 
-        meta_lavagem = resumo_meta_semanal(current_user)
+        meta_lavagem = (
+            resumo_meta_semanal(
+                current_user
+            )
+            if setor_atual == "lavagem"
+            else None
+        )
 
         # Posição semanal em cada ranking.
         lavagem_rank = db.session.query(
@@ -2733,6 +3161,7 @@ def configurar_rotas_gestao(app):
             "gestao.html",
             perfil=perfil,
             perfil_game=perfil_game,
+            setor_atual=setor_atual,
             solicitacao_perfil=solicitacao_perfil,
             pontos_acao=int(pontos_acao or 0),
             pontos_lavagem=int(pontos_lavagem or 0),
@@ -2755,34 +3184,41 @@ def configurar_rotas_gestao(app):
     @app.route("/perfil-setores", methods=["GET", "POST"])
     @login_required
     def perfil_setores():
-        perfil = obter_perfil(current_user.id)
+        """
+        Visualização do setor atual.
+        O próprio usuário não pode acumular ou trocar setores.
+        Mudanças de cargo/setor são feitas pelo ADM.
+        """
+        perfil = obter_perfil(
+            current_user.id
+        )
+
+        sincronizar_perfil_cargo_unico(
+            current_user,
+            perfil,
+        )
 
         if request.method == "POST":
-            perfil.setor_lavagem = request.form.get("setor_lavagem") == "on"
-            perfil.setor_acao = request.form.get("setor_acao") == "on"
-
-            cargo = limpar(request.form.get("cargo_acao"), 60)
-            perfil.cargo_acao = cargo if cargo in CARGOS_PERFIL else None
-
-            try:
-                perfil.impulsos_acao = max(0, min(2, int(request.form.get("impulsos_acao", 0))))
-                perfil.impulsos_lavagem = max(0, min(2, int(request.form.get("impulsos_lavagem", 0))))
-            except ValueError:
-                perfil.impulsos_acao = 0
-                perfil.impulsos_lavagem = 0
-
-            if not perfil.setor_acao and not perfil.setor_lavagem:
-                perfil.setor_lavagem = True
-
-            db.session.commit()
-            return redirect(url_for("gestao"))
+            flash(
+                "Cargo e setor são alterados somente pela administração.",
+                "info",
+            )
+            return redirect(
+                url_for("perfil_setores")
+            )
 
         return render_template(
             "perfil_setores.html",
             perfil=perfil,
-            cargos_acao=CARGOS_ACAO,
+            cargo_atual=current_user.cargo,
+            setor_atual=setor_do_cargo(
+                current_user.cargo
+            ),
+            cargos_acao=CARGOS_ACAO_CADASTRO,
             cargos_gerencia=CARGOS_GERENCIA,
         )
+
+
 
     @app.route("/acoes")
     @login_required
@@ -3181,6 +3617,15 @@ def configurar_rotas_gestao(app):
             ), 500
 
 
+
+    @app.route("/calculadora")
+    @login_required
+    def calculadora():
+        return render_template(
+            "calculadora.html",
+        )
+
+
     @app.route("/ranking")
     @login_required
     def ranking():
@@ -3310,14 +3755,9 @@ def configurar_rotas_gestao(app):
                 usuario.id
             )
 
-            cargo_exibido = usuario.cargo
-
-            if (
-                perfil_setor
-                and perfil_setor.setor_acao
-                and perfil_setor.cargo_acao
-            ):
-                cargo_exibido = perfil_setor.cargo_acao
+            cargo_exibido = (
+                usuario.cargo
+            )
 
             return {
                 "usuario_id": usuario.id,
