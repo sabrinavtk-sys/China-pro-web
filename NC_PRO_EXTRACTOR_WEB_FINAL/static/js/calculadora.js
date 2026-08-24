@@ -86,6 +86,74 @@ async function copiarTexto(texto){
   area.remove();
 }
 
+
+function extrairValorRecebidoOCR(texto){
+  const bruto = String(texto || "")
+    .replace(/\r/g, "\n")
+    .replace(/[|]/g, "I");
+
+  const normalizado = bruto
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const padroes = [
+    /voc[eêé]\s+recebeu\s+(?:r\s*\$|rs|r\$)?\s*([\d][\d\s.,]{2,})/i,
+    /recebeu\s+(?:r\s*\$|rs|r\$)?\s*([\d][\d\s.,]{2,})/i,
+    /receb(?:eu|ido)\s+(?:r\s*\$|rs|r\$)?\s*([\d][\d\s.,]{2,})/i
+  ];
+
+  for(const padrao of padroes){
+    const match = normalizado.match(padrao);
+
+    if(!match){
+      continue;
+    }
+
+    let numero = String(match[1] || "")
+      .trim()
+      .replace(/\s/g, "");
+
+    // Remove pontuação final capturada por OCR.
+    numero = numero.replace(/[.,]+$/, "");
+
+    const valor = parseValorBR(numero);
+
+    if(valor > 0){
+      return {
+        valor,
+        textoEncontrado: match[0]
+      };
+    }
+  }
+
+  return null;
+}
+
+async function reconhecerPrintRecebimento(file, onProgress){
+  if(!window.Tesseract){
+    throw new Error("Biblioteca OCR não carregada.");
+  }
+
+  const resultado = await window.Tesseract.recognize(
+    file,
+    "por",
+    {
+      logger: info => {
+        if(
+          info?.status === "recognizing text"
+          && typeof info.progress === "number"
+        ){
+          onProgress?.(
+            Math.round(info.progress * 100)
+          );
+        }
+      }
+    }
+  );
+
+  return resultado?.data?.text || "";
+}
+
 function iniciarCalculadora(container){
   if(!container || container.dataset.calcReady === "1"){
     return;
@@ -100,11 +168,20 @@ function iniciarCalculadora(container){
   const ganho = container.querySelector("[data-calc-ganho]");
   const original = container.querySelector("[data-calc-original]");
   const taxa = container.querySelector("[data-calc-taxa]");
-  const copiarNumero = container.querySelector("[data-calc-copy-number]");
   const copiarCompleto = container.querySelector("[data-calc-copy-full]");
   const limpar = container.querySelector("[data-calc-clear]");
   const status = container.querySelector("[data-calc-status]");
   const presets = container.querySelectorAll("[data-percentual]");
+
+  const printInput = container.querySelector("[data-calc-print]");
+  const ocrStatus = container.querySelector("[data-calc-ocr-status]");
+  const uploadTitle = container.querySelector("[data-calc-upload-title]");
+  const uploadSubtitle = container.querySelector("[data-calc-upload-subtitle]");
+  const previewWrap = container.querySelector("[data-calc-preview-wrap]");
+  const preview = container.querySelector("[data-calc-preview]");
+
+  let previewUrl = null;
+
 
   function percentualSeguro(){
     let valor = Number(percentualInput?.value || 25);
@@ -183,6 +260,112 @@ function iniciarCalculadora(container){
     calcular();
   });
 
+
+  printInput?.addEventListener("change", async () => {
+    const file = printInput.files?.[0];
+
+    if(!file){
+      return;
+    }
+
+    if(!file.type.startsWith("image/")){
+      if(ocrStatus){
+        ocrStatus.textContent = "❌ Selecione uma imagem válida.";
+      }
+      return;
+    }
+
+    if(previewUrl){
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    previewUrl = URL.createObjectURL(file);
+
+    if(preview && previewWrap){
+      preview.src = previewUrl;
+      previewWrap.hidden = false;
+    }
+
+    if(uploadTitle){
+      uploadTitle.textContent = file.name;
+    }
+
+    if(uploadSubtitle){
+      uploadSubtitle.textContent = "Processando print...";
+    }
+
+    if(ocrStatus){
+      ocrStatus.textContent = "🔎 Preparando OCR...";
+    }
+
+    printInput.disabled = true;
+
+    try{
+      const textoOCR = await reconhecerPrintRecebimento(
+        file,
+        progresso => {
+          if(ocrStatus){
+            ocrStatus.textContent =
+              `🔎 Lendo valor recebido... ${progresso}%`;
+          }
+        }
+      );
+
+      const encontrado = extrairValorRecebidoOCR(textoOCR);
+
+      if(!encontrado){
+        if(ocrStatus){
+          ocrStatus.textContent =
+            "⚠️ Não encontrei “Você recebeu R$...”. Confira se o texto está visível no print ou digite o valor manualmente.";
+        }
+
+        if(uploadSubtitle){
+          uploadSubtitle.textContent =
+            "OCR concluído — valor não identificado";
+        }
+
+        return;
+      }
+
+      if(valorInput){
+        valorInput.value = Math.round(
+          encontrado.valor
+        ).toLocaleString("pt-BR");
+      }
+
+      calcular();
+
+      if(ocrStatus){
+        ocrStatus.textContent =
+          `✅ Valor identificado: ${formatarBRL(encontrado.valor)}. Agora escolha a porcentagem.`;
+      }
+
+      if(uploadSubtitle){
+        uploadSubtitle.textContent =
+          "Valor preenchido automaticamente";
+      }
+    }
+    catch(erro){
+      console.error(
+        "Erro no OCR da calculadora:",
+        erro
+      );
+
+      if(ocrStatus){
+        ocrStatus.textContent =
+          "❌ Não foi possível ler o print. Você ainda pode informar o valor manualmente.";
+      }
+
+      if(uploadSubtitle){
+        uploadSubtitle.textContent =
+          "Falha na leitura OCR";
+      }
+    }
+    finally{
+      printInput.disabled = false;
+    }
+  });
+
   percentualInput?.addEventListener("input", () => {
     if(status){
       status.textContent = "";
@@ -203,33 +386,6 @@ function iniciarCalculadora(container){
 
       calcular();
     });
-  });
-
-  copiarNumero?.addEventListener("click", async () => {
-    const resultado = calcular();
-
-    if(!resultado.valor){
-      if(status){
-        status.textContent = "⚠️ Informe um valor primeiro.";
-      }
-      return;
-    }
-
-    try{
-      await copiarTexto(
-        numeroPuro(resultado.valorEnviar)
-      );
-
-      if(status){
-        status.textContent =
-          `✅ Número copiado: ${numeroPuro(resultado.valorEnviar)}`;
-      }
-    }catch{
-      if(status){
-        status.textContent =
-          "❌ Não foi possível copiar o número.";
-      }
-    }
   });
 
   copiarCompleto?.addEventListener("click", async () => {
@@ -292,4 +448,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
 window.iniciarCalculadoraChinaPro = iniciarCalculadora;
 window.parseValorCalculadoraChinaPro = parseValorBR;
+window.extrairValorRecebidoCalculadoraChinaPro = extrairValorRecebidoOCR;
 })();

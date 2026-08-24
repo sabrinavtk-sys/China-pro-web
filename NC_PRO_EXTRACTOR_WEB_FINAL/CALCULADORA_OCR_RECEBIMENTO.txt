@@ -1,0 +1,16 @@
+CHINA PRO — CALCULADORA COM OCR
+
+Novo fluxo:
+1. Usuário abre Calculadora.
+2. Envia um print onde esteja visível "Você recebeu R$...".
+3. Tesseract OCR lê o print.
+4. O sistema procura especificamente o valor recebido.
+5. O campo Valor recebido é preenchido automaticamente.
+6. Usuário escolhe apenas a porcentagem (20% a 40%).
+7. Sistema calcula ganho e valor a enviar.
+8. Campo continua editável caso o OCR erre.
+
+Importante:
+- O print precisa deixar a mensagem e o valor legíveis.
+- OCR exclusivo da Calculadora, separado do OCR principal de Lavagem.
+- Mantido botão Copiar cálculo.

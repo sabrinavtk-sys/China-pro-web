@@ -29,8 +29,40 @@
 
   <div class="china-calc-body">
     <div class="china-calc-inputs">
+
+      <div class="china-calc-ocr">
+        <div class="china-calc-ocr-head">
+          <div>
+            <span class="china-calc-kicker">LEITURA AUTOMÁTICA</span>
+            <strong>📷 Print do recebimento</strong>
+            <small>
+              Envie o print onde aparece “Você recebeu R$...”.
+              O valor será preenchido automaticamente.
+            </small>
+          </div>
+          <span class="china-calc-ocr-badge">OCR</span>
+        </div>
+
+        <label class="china-calc-upload" data-calc-upload-label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            data-calc-print
+          >
+          <span class="china-calc-upload-icon">📤</span>
+          <b data-calc-upload-title>Selecionar print</b>
+          <small data-calc-upload-subtitle>PNG, JPG ou WEBP</small>
+        </label>
+
+        <div class="china-calc-preview" data-calc-preview-wrap hidden>
+          <img data-calc-preview alt="Prévia do print">
+        </div>
+
+        <div class="china-calc-ocr-status" data-calc-ocr-status></div>
+      </div>
+
       <label>
-        <span>Valor original / recebido</span>
+        <span>Valor recebido <small class="china-field-hint">OCR ou edição manual</small></span>
         <div class="china-money-input">
           <b>R$</b>
           <input
@@ -73,9 +105,6 @@
         <span>Valor a enviar</span>
         <strong data-calc-enviar>R$ 0,00</strong>
         <div class="china-calc-result-actions">
-          <button type="button" data-calc-copy-number>
-            🔢 Copiar número
-          </button>
           <button type="button" data-calc-copy-full class="secondary">
             📋 Copiar cálculo
           </button>
@@ -111,5 +140,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-3"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="{{ url_for('static', filename='js/calculadora.js') }}?v=20260823-5"></script>
 {% endblock %}
