@@ -1,0 +1,16 @@
+CHINA PRO — CORREÇÃO DA CALCULADORA
+
+Bug corrigido:
+- Campo formatado como 1.000.000 era interpretado incorretamente.
+
+Teste validado:
+Valor original: 1.000.000
+Porcentagem: 31%
+Ganho: 310.000
+Valor a enviar: 690.000
+
+Botão "Copiar número":
+- copia 690000
+- sem R$
+- sem pontos de milhar
+- sem texto adicional

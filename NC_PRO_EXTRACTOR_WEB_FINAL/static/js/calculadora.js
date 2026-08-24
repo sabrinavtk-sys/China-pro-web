@@ -4,11 +4,35 @@
 const MIN_PERCENT = 20;
 const MAX_PERCENT = 40;
 
-function limparNumero(valor){
-  const somenteDigitos = String(valor || "")
-    .replace(/[^\d]/g, "");
+function parseValorBR(valor){
+  let texto = String(valor || "")
+    .trim()
+    .replace(/[^\d.,]/g, "");
 
-  return Number(somenteDigitos || 0);
+  if(!texto){
+    return 0;
+  }
+
+  /*
+    Regras:
+    1.000.000      -> 1000000
+    1.000.000,50   -> 1000000.50
+    1000000        -> 1000000
+    1000000,50     -> 1000000.50
+  */
+  if(texto.includes(",")){
+    const partes = texto.split(",");
+    const inteiro = partes[0].replace(/\./g, "");
+    const decimal = (partes[1] || "").replace(/\D/g, "").slice(0, 2);
+    const normalizado = decimal ? `${inteiro}.${decimal}` : inteiro;
+    const n = Number(normalizado);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // Sem vírgula, pontos são separadores de milhar.
+  texto = texto.replace(/\./g, "");
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function formatarBRL(valor){
@@ -24,8 +48,14 @@ function formatarBRL(valor){
 }
 
 function formatarCampo(valor){
-  const numero = limparNumero(valor);
-  return numero ? numero.toLocaleString("pt-BR") : "";
+  const numero = parseValorBR(valor);
+
+  if(!numero){
+    return "";
+  }
+
+  // No input, usa formato inteiro enquanto o usuário digita.
+  return Math.round(numero).toLocaleString("pt-BR");
 }
 
 function numeroPuro(valor){
@@ -101,7 +131,7 @@ function iniciarCalculadora(container){
   }
 
   function calcular(){
-    const valor = limparNumero(valorInput?.value);
+    const valor = parseValorBR(valorInput?.value);
     const percentual = percentualSeguro();
 
     const valorGanho = valor * percentual / 100;
@@ -138,14 +168,13 @@ function iniciarCalculadora(container){
   }
 
   valorInput?.addEventListener("input", () => {
-    valorInput.value = formatarCampo(valorInput.value);
+    const somenteDigitos = String(valorInput.value || "").replace(/[^\d]/g, "");
 
-    try{
-      valorInput.setSelectionRange(
-        valorInput.value.length,
-        valorInput.value.length
-      );
-    }catch{}
+    if(somenteDigitos){
+      valorInput.value = Number(somenteDigitos).toLocaleString("pt-BR");
+    }else{
+      valorInput.value = "";
+    }
 
     if(status){
       status.textContent = "";
@@ -158,6 +187,7 @@ function iniciarCalculadora(container){
     if(status){
       status.textContent = "";
     }
+
     calcular();
   });
 
@@ -261,4 +291,5 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.iniciarCalculadoraChinaPro = iniciarCalculadora;
+window.parseValorCalculadoraChinaPro = parseValorBR;
 })();
