@@ -26,6 +26,7 @@
     </div>
     <div class="actions">
       <button type="submit">Salvar desmanche</button>
+      <button type="button" id="copiarFormularioDesmanche" class="btn secondary">📋 Copiar formulário</button>
       <button type="button" id="limparDesmanche" class="btn secondary">🧹 Limpar</button>
     </div>
     <div id="statusDesmanche"></div>
@@ -57,5 +58,5 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="{{ url_for('static', filename='js/desmanche-ocr.js') }}?v=2"></script>
-<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260823-pontos2m"></script>
+<script src="{{ url_for('static', filename='js/desmanches.js') }}?v=20260826-copiar1"></script>
 {% endblock %}

@@ -40,6 +40,39 @@ async function lerRespostaAPI(resposta){
   throw erro;
 }
 
+
+function formatarDinheiroDesmanche(valor){
+  const numero = Number(String(valor || "").replace(",", "."));
+  if(!Number.isFinite(numero)) return "R$ 0";
+  return "R$ " + numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
+function formatarDataDesmanche(valor){
+  if(!valor) return "";
+  const [dataParte, horaParte=""] = String(valor).split("T");
+  const [ano, mes, dia] = dataParte.split("-");
+  if(!ano || !mes || !dia) return valor;
+  return `${dia}/${mes}/${ano}${horaParte ? " " + horaParte.slice(0,5) : ""}`;
+}
+
+async function copiarTextoDesmanche(texto){
+  if(navigator.clipboard?.writeText){
+    await navigator.clipboard.writeText(texto);
+    return;
+  }
+  const area = document.createElement("textarea");
+  area.value = texto;
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand("copy");
+  area.remove();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const data = document.querySelector("#dataDesmanche");
   const form = document.querySelector("#formDesmanche");
@@ -50,6 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const limparDesmanche =
     document.querySelector("#limparDesmanche");
+
+  const copiarFormularioDesmanche =
+    document.querySelector("#copiarFormularioDesmanche");
 
   function limparFormularioDesmanche(){
     form?.reset();
@@ -89,6 +125,48 @@ document.addEventListener("DOMContentLoaded", () => {
         )
       ){
         limparFormularioDesmanche();
+      }
+    }
+  );
+
+
+  copiarFormularioDesmanche?.addEventListener(
+    "click",
+    async () => {
+      const modelo = document.querySelector("#modelo")?.value.trim() || "";
+      const dataHora = document.querySelector("#dataDesmanche")?.value || "";
+      const valorRecebido = document.querySelector("#quantidade")?.value || "";
+      const prova = document.querySelector("#provaDesmanche")?.files?.[0];
+      const status = document.querySelector("#statusDesmanche");
+
+      if(!modelo || !dataHora || !valorRecebido){
+        if(status){
+          status.innerHTML =
+            '<p class="bad">❌ Preencha Modelo, Data/Hora e Valor recebido antes de copiar.</p>';
+        }
+        return;
+      }
+
+      const texto = [
+        "🚗 Veículo Desmanchado",
+        `Modelo: ${modelo}`,
+        `Data e hora: ${formatarDataDesmanche(dataHora)}`,
+        `Valor recebido: ${formatarDinheiroDesmanche(valorRecebido)}`,
+        `Print: ${prova ? "Validado" : "Não selecionado"}`
+      ].join("\n");
+
+      try{
+        await copiarTextoDesmanche(texto);
+        if(status){
+          status.innerHTML =
+            `<p class="good">✅ Formulário copiado. Valor recebido: ${formatarDinheiroDesmanche(valorRecebido)}.</p>`;
+        }
+      }catch(err){
+        console.error("ERRO AO COPIAR FORMULÁRIO:", err);
+        if(status){
+          status.innerHTML =
+            '<p class="bad">❌ Não foi possível copiar o formulário.</p>';
+        }
       }
     }
   );
