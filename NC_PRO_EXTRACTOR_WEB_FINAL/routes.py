@@ -1344,6 +1344,32 @@ def configurar_rotas(app):
             status="pendente"
         ).count()
 
+        contas_inativas = Usuario.query.filter(
+            Usuario.is_admin.is_(False),
+            Usuario.ativo.is_(False),
+        ).count()
+
+        membros_com_adv = 0
+        membros_em_pd = 0
+
+        for usuario in Usuario.query.filter(
+            Usuario.is_admin.is_(False)
+        ).all():
+            qtd_adv = len(
+                advertencias_ativas(
+                    usuario.id
+                )
+            )
+
+            if qtd_adv == 1:
+                membros_com_adv += 1
+            elif qtd_adv >= 2:
+                membros_em_pd += 1
+
+        logs_recentes = LogAdmin.query.order_by(
+            LogAdmin.criado_em.desc()
+        ).limit(8).all()
+
         return render_template(
             "admin_dashboard.html",
             membros=membros,
@@ -1354,6 +1380,10 @@ def configurar_rotas(app):
             solicitacoes=solicitacoes,
             total_solicitacoes=len(solicitacoes),
             correcoes_pendentes=correcoes_pendentes,
+            contas_inativas=contas_inativas,
+            membros_com_adv=membros_com_adv,
+            membros_em_pd=membros_em_pd,
+            logs_recentes=logs_recentes,
             q=q,
             filtro_status=filtro_status,
             filtro_setor=filtro_setor,
@@ -2215,6 +2245,276 @@ def configurar_rotas(app):
 
         return redirect(
             url_for("admin_dashboard")
+        )
+
+
+
+    @app.route("/admin/registros")
+    @login_required
+    @admin_required
+    def admin_registros():
+        """
+        Auditoria de registros operacionais.
+        Mostra todos os registros de todos os usuários,
+        com paginação para não ocultar desmanches antigos.
+        """
+        tipo = limpar_texto(
+            request.args.get(
+                "tipo",
+                "todos",
+            ),
+            20,
+        )
+
+        if tipo not in {
+            "todos",
+            "lavagem",
+            "acao",
+            "desmanche",
+        }:
+            tipo = "todos"
+
+        q = limpar_texto(
+            request.args.get("q"),
+            100,
+        ).lower()
+
+        try:
+            pagina = max(
+                1,
+                int(
+                    request.args.get(
+                        "pagina",
+                        1,
+                    )
+                ),
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            pagina = 1
+
+        por_pagina = 100
+        registros = []
+
+        usuarios = {
+            usuario.id: usuario
+            for usuario in Usuario.query.all()
+        }
+
+        perfis_game = {
+            perfil.usuario_id: perfil
+            for perfil in PerfilGame.query.all()
+        }
+
+        def dados_usuario(
+            usuario_id
+        ):
+            usuario = usuarios.get(
+                usuario_id
+            )
+
+            perfil = perfis_game.get(
+                usuario_id
+            )
+
+            return {
+                "usuario_site": (
+                    usuario.usuario
+                    if usuario
+                    else "Conta removida"
+                ),
+                "nome_game": (
+                    perfil.nome_game
+                    if perfil
+                    else "Não configurado"
+                ),
+                "id_game": (
+                    perfil.id_game
+                    if perfil
+                    else "—"
+                ),
+            }
+
+        if tipo in {
+            "todos",
+            "lavagem",
+        }:
+            for item in Operacao.query.order_by(
+                Operacao.criado_em.desc()
+            ):
+                pessoa = dados_usuario(
+                    item.usuario_id
+                )
+
+                texto = " ".join([
+                    pessoa["usuario_site"],
+                    pessoa["nome_game"],
+                    pessoa["id_game"],
+                    item.nome_jogador or "",
+                    item.id_jogador or "",
+                ]).lower()
+
+                if q and q not in texto:
+                    continue
+
+                registros.append({
+                    "tipo": "Lavagem",
+                    "icone": "💰",
+                    "usuario": pessoa,
+                    "titulo": (
+                        f"{item.nome_jogador or 'Não informado'} "
+                        f"#{item.id_jogador or '—'}"
+                    ),
+                    "valor": float(
+                        item.valor or 0
+                    ),
+                    "extra": (
+                        f"{abs(float(item.porcentagem or 0)):.0f}%"
+                    ),
+                    "data": item.criado_em,
+                })
+
+        if tipo in {
+            "todos",
+            "acao",
+        }:
+            for item in Acao.query.order_by(
+                Acao.data_hora.desc()
+            ):
+                pessoa = dados_usuario(
+                    item.usuario_id
+                )
+
+                texto = " ".join([
+                    pessoa["usuario_site"],
+                    pessoa["nome_game"],
+                    pessoa["id_game"],
+                    item.tipo or "",
+                    item.resultado or "",
+                    item.responsavel or "",
+                ]).lower()
+
+                if q and q not in texto:
+                    continue
+
+                registros.append({
+                    "tipo": "Ação",
+                    "icone": "🔫",
+                    "usuario": pessoa,
+                    "titulo": (
+                        f"{item.tipo or 'Ação'} — "
+                        f"{item.resultado or '—'}"
+                    ),
+                    "valor": None,
+                    "extra": (
+                        f"+{int(item.pontos or 0)} pts"
+                    ),
+                    "data": item.data_hora,
+                })
+
+        if tipo in {
+            "todos",
+            "desmanche",
+        }:
+            for item in Desmanche.query.order_by(
+                Desmanche.data_hora.desc(),
+                Desmanche.id.desc(),
+            ):
+                pessoa = dados_usuario(
+                    item.usuario_id
+                )
+
+                texto = " ".join([
+                    pessoa["usuario_site"],
+                    pessoa["nome_game"],
+                    pessoa["id_game"],
+                    item.modelo or "",
+                    item.destino_pontos or "",
+                ]).lower()
+
+                if q and q not in texto:
+                    continue
+
+                registros.append({
+                    "tipo": "Desmanche",
+                    "icone": "🚗",
+                    "usuario": pessoa,
+                    "titulo": (
+                        item.modelo
+                        or "Não informado"
+                    ),
+                    "valor": float(
+                        item.quantidade or 0
+                    ),
+                    "extra": (
+                        f"+{int(item.pontos or 0)} "
+                        f"{item.destino_pontos or '—'}"
+                    ),
+                    "data": item.data_hora,
+                })
+
+        def chave_data(item):
+            data = item.get("data")
+
+            if data is None:
+                return datetime.min.replace(
+                    tzinfo=timezone.utc
+                )
+
+            if data.tzinfo is None:
+                return data.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return data
+
+        registros.sort(
+            key=chave_data,
+            reverse=True,
+        )
+
+        total_registros = len(
+            registros
+        )
+
+        total_paginas = max(
+            1,
+            (
+                total_registros
+                + por_pagina
+                - 1
+            )
+            // por_pagina
+        )
+
+        if pagina > total_paginas:
+            pagina = total_paginas
+
+        inicio = (
+            pagina - 1
+        ) * por_pagina
+
+        registros = registros[
+            inicio:inicio + por_pagina
+        ]
+
+        totais = {
+            "lavagens": Operacao.query.count(),
+            "acoes": Acao.query.count(),
+            "desmanches": Desmanche.query.count(),
+        }
+
+        return render_template(
+            "admin_registros.html",
+            registros=registros,
+            tipo=tipo,
+            q=q,
+            pagina=pagina,
+            total_paginas=total_paginas,
+            total_registros=total_registros,
+            totais=totais,
         )
 
 
@@ -3400,13 +3700,52 @@ def configurar_rotas_gestao(app):
     @login_required
     def desmanches():
         perfil = obter_perfil(current_user.id)
-        ultimos = Desmanche.query.filter_by(usuario_id=current_user.id).order_by(
-            Desmanche.data_hora.desc(), Desmanche.id.desc()
-        ).limit(20).all()
+
+        try:
+            pagina = max(
+                1,
+                int(request.args.get("pagina", 1))
+            )
+        except (TypeError, ValueError):
+            pagina = 1
+
+        por_pagina = 50
+
+        consulta = Desmanche.query.filter_by(
+            usuario_id=current_user.id
+        ).order_by(
+            Desmanche.data_hora.desc(),
+            Desmanche.id.desc(),
+        )
+
+        total_desmanches = consulta.count()
+
+        total_paginas = max(
+            1,
+            (
+                total_desmanches
+                + por_pagina
+                - 1
+            )
+            // por_pagina
+        )
+
+        if pagina > total_paginas:
+            pagina = total_paginas
+
+        ultimos = consulta.offset(
+            (pagina - 1) * por_pagina
+        ).limit(
+            por_pagina
+        ).all()
+
         return render_template(
             "desmanches.html",
             perfil=perfil,
             ultimos=ultimos,
+            total_desmanches=total_desmanches,
+            pagina=pagina,
+            total_paginas=total_paginas,
         )
 
     @app.route("/desmanches/salvar", methods=["POST"])
@@ -4257,69 +4596,199 @@ def configurar_rotas_gestao(app):
     @app.route("/historico-geral")
     @login_required
     def historico_geral():
-        tipo = request.args.get("tipo", "todos")
-        q = limpar(request.args.get("q"), 100).lower()
+        tipo = request.args.get(
+            "tipo",
+            "todos",
+        )
 
+        q = limpar(
+            request.args.get("q"),
+            100,
+        ).lower()
+
+        try:
+            pagina = max(
+                1,
+                int(
+                    request.args.get(
+                        "pagina",
+                        1,
+                    )
+                ),
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            pagina = 1
+
+        por_pagina = 100
         itens = []
 
-        if tipo in {"todos", "lavagem"}:
-            consulta = Operacao.query.filter_by(usuario_id=current_user.id).order_by(
+        if tipo in {
+            "todos",
+            "lavagem",
+        }:
+            consulta = Operacao.query.filter_by(
+                usuario_id=current_user.id
+            ).order_by(
                 Operacao.criado_em.desc()
-            ).limit(80)
+            )
+
             for op in consulta:
-                if q and q not in f"{op.nome_jogador} {op.id_jogador}".lower():
+                texto_busca = (
+                    f"{op.nome_jogador or ''} "
+                    f"{op.id_jogador or ''}"
+                ).lower()
+
+                if q and q not in texto_busca:
                     continue
+
                 itens.append({
                     "tipo": "Lavagem",
                     "tipo_slug": "lavagem",
                     "registro_id": op.id,
                     "icone": "💰",
-                    "titulo": f"{op.nome_jogador} #{op.id_jogador}",
-                    "detalhe": f"R$ {float(op.valor):,.2f} • {abs(float(op.porcentagem)):.0f}%",
+                    "titulo": (
+                        f"{op.nome_jogador or 'Não informado'} "
+                        f"#{op.id_jogador or '—'}"
+                    ),
+                    "detalhe": (
+                        f"R$ {float(op.valor or 0):,.2f} "
+                        f"• {abs(float(op.porcentagem or 0)):.0f}%"
+                    ),
                     "data": op.criado_em,
                 })
 
-        if tipo in {"todos", "acao"}:
-            consulta = Acao.query.filter_by(usuario_id=current_user.id).order_by(
+        if tipo in {
+            "todos",
+            "acao",
+        }:
+            consulta = Acao.query.filter_by(
+                usuario_id=current_user.id
+            ).order_by(
                 Acao.data_hora.desc()
-            ).limit(80)
+            )
+
             for item in consulta:
-                if q and q not in f"{item.tipo} {item.resultado} {item.responsavel}".lower():
+                texto_busca = (
+                    f"{item.tipo or ''} "
+                    f"{item.resultado or ''} "
+                    f"{item.responsavel or ''}"
+                ).lower()
+
+                if q and q not in texto_busca:
                     continue
+
                 itens.append({
                     "tipo": "Ação",
                     "tipo_slug": "acao",
                     "registro_id": item.id,
                     "icone": "🔫",
-                    "titulo": f"{item.tipo} — {item.resultado}",
-                    "detalhe": f"+{item.pontos} pts • {item.responsavel}",
+                    "titulo": (
+                        f"{item.tipo or 'Ação'} — "
+                        f"{item.resultado or '—'}"
+                    ),
+                    "detalhe": (
+                        f"+{int(item.pontos or 0)} pts "
+                        f"• {item.responsavel or 'Não informado'}"
+                    ),
                     "data": item.data_hora,
                 })
 
-        if tipo in {"todos", "desmanche"}:
-            consulta = Desmanche.query.filter_by(usuario_id=current_user.id).order_by(
-                Desmanche.data_hora.desc()
-            ).limit(80)
+        if tipo in {
+            "todos",
+            "desmanche",
+        }:
+            consulta = Desmanche.query.filter_by(
+                usuario_id=current_user.id
+            ).order_by(
+                Desmanche.data_hora.desc(),
+                Desmanche.id.desc(),
+            )
+
             for item in consulta:
-                if q and q not in item.modelo.lower():
+                modelo = (
+                    item.modelo
+                    or "Não informado"
+                )
+
+                if (
+                    q
+                    and q not in modelo.lower()
+                ):
                     continue
+
                 itens.append({
                     "tipo": "Desmanche",
                     "tipo_slug": "desmanche",
                     "registro_id": item.id,
                     "icone": "🚗",
-                    "titulo": item.modelo,
-                    "detalhe": f"R$ {float(item.quantidade):,.2f} • +{item.pontos} {item.destino_pontos}",
+                    "titulo": modelo,
+                    "detalhe": (
+                        f"R$ {float(item.quantidade or 0):,.2f} "
+                        f"• +{int(item.pontos or 0)} "
+                        f"{item.destino_pontos or '—'}"
+                    ),
                     "data": item.data_hora,
                 })
 
-        itens.sort(key=lambda item: item["data"], reverse=True)
-        itens = itens[:100]
+        def chave_data(item):
+            data = item.get("data")
+
+            if data is None:
+                return datetime.min.replace(
+                    tzinfo=timezone.utc
+                )
+
+            if data.tzinfo is None:
+                return data.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return data
+
+        itens.sort(
+            key=chave_data,
+            reverse=True,
+        )
+
+        total_itens = len(itens)
+
+        total_paginas = max(
+            1,
+            (
+                total_itens
+                + por_pagina
+                - 1
+            )
+            // por_pagina
+        )
+
+        if pagina > total_paginas:
+            pagina = total_paginas
+
+        inicio = (
+            pagina - 1
+        ) * por_pagina
+
+        fim = (
+            inicio
+            + por_pagina
+        )
+
+        itens_pagina = itens[
+            inicio:fim
+        ]
 
         return render_template(
             "historico_geral.html",
-            itens=itens,
+            itens=itens_pagina,
             tipo=tipo,
             q=q,
+            total_itens=total_itens,
+            pagina=pagina,
+            total_paginas=total_paginas,
         )
+
 

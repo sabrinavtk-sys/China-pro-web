@@ -1,0 +1,36 @@
+CHINA PRO — REVISÃO DE LOGS / DESMANCHES / ADM
+
+PROBLEMA ENCONTRADO
+- A página Desmanches mostrava somente os 20 últimos registros.
+- O Histórico Geral limitava cada categoria a 80 registros.
+- Depois o Histórico Geral ainda cortava o resultado final em 100.
+- Por isso registros antigos continuavam no banco, mas não apareciam na interface.
+
+CORREÇÃO
+- Desmanches agora usa paginação: 50 registros por página.
+- Todos os desmanches permanecem acessíveis.
+- Histórico Geral agora pagina todos os resultados: 100 por página.
+- Nenhum desmanche antigo é descartado pela interface.
+
+NOVA ÁREA ADM: TODOS OS REGISTROS
+- Nova rota /admin/registros.
+- ADM pode visualizar registros de todos os usuários.
+- Filtros: Todos, Lavagens, Ações e Desmanches.
+- Pesquisa por usuário, Nome Game, ID Game, veículo e dados da operação.
+- Paginação de 100 registros por página.
+- Cards mostram total real de Lavagens, Ações e Desmanches.
+
+MELHORIAS DO PAINEL ADM
+- Atalho principal para Todos os Registros.
+- Indicadores de contas inativas.
+- Indicadores de membros com 1 ADV.
+- Indicadores de membros em situação de PD.
+- Indicadores de correções e Nome/ID pendentes.
+- Últimas ações administrativas no próprio dashboard.
+- Filtros de membros ficam fixos no topo durante a rolagem.
+- Tabelas e listas com melhor leitura e destaque ao passar o mouse.
+
+OBSERVAÇÃO
+- Logs dos ADMs continuam destinados somente a ações administrativas.
+- Registros de Lavagem/Ação/Desmanche ficam na nova auditoria operacional,
+  evitando misturar atividade dos membros com ações administrativas.

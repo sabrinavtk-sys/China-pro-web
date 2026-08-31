@@ -15,6 +15,7 @@
 </section>
 
 <div class="admin-top-actions">
+  <a class="btn" href="{{ url_for('admin_registros') }}">📚 Todos os Registros</a>
   <a class="btn secondary" href="{{ url_for('admin_logs') }}">📜 Logs dos ADMs</a>
   <a class="btn secondary" href="{{ url_for('admin_correcoes') }}">📝 Correções{% if correcoes_pendentes %} ({{ correcoes_pendentes }}){% endif %}</a>
   <a class="btn secondary" href="{{ url_for('admin_backup') }}">💾 Backup JSON</a>
@@ -44,6 +45,33 @@
     <strong>{{ total_desmanches_geral }}</strong>
     <small class="muted">Registros no sistema</small>
   </article>
+</section>
+
+<section class="admin-attention-grid">
+  <a class="admin-attention-card" href="{{ url_for('admin_dashboard', status='inativo') }}">
+    <span>⏸</span>
+    <div><b>{{ contas_inativas }}</b><small>Contas inativas</small></div>
+  </a>
+
+  <a class="admin-attention-card warning" href="{{ url_for('admin_dashboard', status='adv') }}">
+    <span>⚠️</span>
+    <div><b>{{ membros_com_adv }}</b><small>Membros com 1 ADV</small></div>
+  </a>
+
+  <a class="admin-attention-card danger" href="{{ url_for('admin_dashboard', status='pd') }}">
+    <span>🛑</span>
+    <div><b>{{ membros_em_pd }}</b><small>Membros em PD</small></div>
+  </a>
+
+  <a class="admin-attention-card" href="{{ url_for('admin_correcoes') }}">
+    <span>📝</span>
+    <div><b>{{ correcoes_pendentes }}</b><small>Correções pendentes</small></div>
+  </a>
+
+  <div class="admin-attention-card">
+    <span>🎮</span>
+    <div><b>{{ total_solicitacoes }}</b><small>Nome/ID pendentes</small></div>
+  </div>
 </section>
 
 {% if solicitacoes %}
@@ -279,6 +307,31 @@
       {% endfor %}
       </tbody>
     </table>
+  </div>
+</section>
+
+
+<section class="card section-block admin-recent-logs">
+  <div class="section-title">
+    <div>
+      <span class="kicker">ATIVIDADE ADMINISTRATIVA</span>
+      <h2>🕒 Últimas ações dos ADMs</h2>
+    </div>
+    <a class="btn secondary" href="{{ url_for('admin_logs') }}">Ver todos os logs</a>
+  </div>
+
+  <div class="admin-recent-log-list">
+    {% for log in logs_recentes %}
+      <div class="admin-recent-log">
+        <div>
+          <b>{{ log.acao }}</b>
+          <small>{{ log.detalhes or 'Sem detalhes' }}</small>
+        </div>
+        <span>{{ log.criado_em.astimezone().strftime('%d/%m %H:%M') }}</span>
+      </div>
+    {% else %}
+      <div class="empty-state">Nenhuma atividade administrativa registrada.</div>
+    {% endfor %}
   </div>
 </section>
 

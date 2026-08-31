@@ -1,0 +1,115 @@
+{% extends "base_gestao.html" %}
+{% block title %}Registros — Administração China PRO{% endblock %}
+{% block page_heading %}Registros do Sistema{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <div>
+    <span class="kicker">AUDITORIA OPERACIONAL</span>
+    <h2>📚 Todos os registros</h2>
+    <p class="muted">
+      Consulte Lavagens, Ações e Desmanches de todos os usuários. Nenhum registro antigo é ocultado.
+    </p>
+  </div>
+
+  <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">← Voltar ao ADM</a>
+</section>
+
+<section class="stats-grid stats-grid-3 admin-record-stats">
+  <a class="card stat admin-stat-link" href="{{ url_for('admin_registros', tipo='lavagem') }}">
+    <span>💰 Lavagens</span>
+    <strong>{{ totais.lavagens }}</strong>
+    <small>Ver todos</small>
+  </a>
+  <a class="card stat admin-stat-link" href="{{ url_for('admin_registros', tipo='acao') }}">
+    <span>🔫 Ações</span>
+    <strong>{{ totais.acoes }}</strong>
+    <small>Ver todos</small>
+  </a>
+  <a class="card stat admin-stat-link" href="{{ url_for('admin_registros', tipo='desmanche') }}">
+    <span>🚗 Desmanches</span>
+    <strong>{{ totais.desmanches }}</strong>
+    <small>Ver todos</small>
+  </a>
+</section>
+
+<section class="card admin-filter-card">
+  <form method="GET" class="admin-filter-grid admin-record-filter">
+    <div>
+      <label>Tipo</label>
+      <select name="tipo">
+        <option value="todos" {% if tipo=='todos' %}selected{% endif %}>Todos</option>
+        <option value="lavagem" {% if tipo=='lavagem' %}selected{% endif %}>Lavagens</option>
+        <option value="acao" {% if tipo=='acao' %}selected{% endif %}>Ações</option>
+        <option value="desmanche" {% if tipo=='desmanche' %}selected{% endif %}>Desmanches</option>
+      </select>
+    </div>
+    <div>
+      <label>Pesquisar</label>
+      <input name="q" value="{{ q }}" placeholder="Usuário, Nome Game, ID Game, veículo...">
+    </div>
+    <div class="admin-filter-action">
+      <button type="submit">Pesquisar</button>
+      <a class="btn secondary" href="{{ url_for('admin_registros') }}">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<section class="card section-block">
+  <div class="section-title">
+    <div>
+      <span class="kicker">RESULTADOS</span>
+      <h2>{{ total_registros }} registro(s)</h2>
+      <small class="muted">Página {{ pagina }} de {{ total_paginas }} • até 100 por página</small>
+    </div>
+  </div>
+
+  <div class="admin-record-list">
+    {% for item in registros %}
+    <article class="admin-record-row">
+      <div class="admin-record-icon">{{ item.icone }}</div>
+
+      <div class="admin-record-main">
+        <div class="row">
+          <b>{{ item.tipo }} — {{ item.titulo }}</b>
+          <span class="pill">
+            {{ item.data.astimezone().strftime('%d/%m/%Y %H:%M') if item.data else '—' }}
+          </span>
+        </div>
+
+        <div class="admin-record-user">
+          <span>👤 {{ item.usuario.nome_game }}</span>
+          <span>#{{ item.usuario.id_game }}</span>
+          <small>Conta: {{ item.usuario.usuario_site }}</small>
+        </div>
+
+        <div class="admin-record-detail">
+          {% if item.valor is not none %}
+          <strong>R$ {{ "{:,.2f}".format(item.valor).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong>
+          {% endif %}
+          <span>{{ item.extra }}</span>
+        </div>
+      </div>
+    </article>
+    {% else %}
+      <div class="empty-state">Nenhum registro encontrado com esse filtro.</div>
+    {% endfor %}
+  </div>
+
+  {% if total_paginas > 1 %}
+  <nav class="pagination-bar">
+    {% if pagina > 1 %}
+      <a class="btn secondary" href="{{ url_for('admin_registros', tipo=tipo, q=q, pagina=pagina-1) }}">← Anterior</a>
+    {% else %}
+      <span></span>
+    {% endif %}
+
+    <span>Página <b>{{ pagina }}</b> de <b>{{ total_paginas }}</b></span>
+
+    {% if pagina < total_paginas %}
+      <a class="btn secondary" href="{{ url_for('admin_registros', tipo=tipo, q=q, pagina=pagina+1) }}">Próxima →</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

@@ -47,12 +47,34 @@
 </section>
 
 <section class="card section-block">
-  <div class="section-title"><div><h2>Últimos desmanches</h2><small class="muted">Seus registros recentes</small></div></div>
+  <div class="section-title">
+    <div>
+      <h2>Histórico de desmanches</h2>
+      <small class="muted">{{ total_desmanches }} registro(s) no total • página {{ pagina }} de {{ total_paginas }}</small>
+    </div>
+    <a class="btn secondary" href="{{ url_for('historico_geral', tipo='desmanche') }}">Ver histórico completo</a>
+  </div>
   <div class="list">
   {% for item in ultimos %}
     <div class="item"><div class="row"><b>{{ item.modelo }}</b><span class="pill">+{{ item.pontos }} {{ item.destino_pontos }}</span></div><small>R$ {{ "{:,.2f}".format(item.quantidade).replace(",", "X").replace(".", ",").replace("X", ".") }} • {{ item.data_hora.astimezone().strftime('%d/%m/%Y %H:%M') }}</small></div>
   {% else %}<div class="empty-state">Nenhum desmanche registrado ainda.</div>{% endfor %}
   </div>
+
+  {% if total_paginas > 1 %}
+  <nav class="pagination-bar" aria-label="Paginação dos desmanches">
+    {% if pagina > 1 %}
+      <a class="btn secondary" href="{{ url_for('desmanches', pagina=pagina-1) }}">← Anterior</a>
+    {% else %}
+      <span></span>
+    {% endif %}
+
+    <span>Página <b>{{ pagina }}</b> de <b>{{ total_paginas }}</b></span>
+
+    {% if pagina < total_paginas %}
+      <a class="btn secondary" href="{{ url_for('desmanches', pagina=pagina+1) }}">Próxima →</a>
+    {% endif %}
+  </nav>
+  {% endif %}
 </section>
 {% endblock %}
 {% block scripts %}

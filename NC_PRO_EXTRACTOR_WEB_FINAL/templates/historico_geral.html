@@ -15,7 +15,12 @@
 </section>
 
 <section class="card section-block">
-  <div class="section-title"><div><h2>Registros encontrados</h2><small class="muted">Resultados ordenados por data</small></div></div>
+  <div class="section-title">
+    <div>
+      <h2>Registros encontrados</h2>
+      <small class="muted">{{ total_itens }} resultado(s) • página {{ pagina }} de {{ total_paginas }}</small>
+    </div>
+  </div>
   <div class="history-grid">
   {% for item in itens %}
     <article class="history-card">
@@ -38,5 +43,21 @@
     <div class="empty-state">Nenhum registro encontrado com esses filtros.</div>
   {% endfor %}
   </div>
+
+  {% if total_paginas > 1 %}
+  <nav class="pagination-bar">
+    {% if pagina > 1 %}
+      <a class="btn secondary" href="{{ url_for('historico_geral', tipo=tipo, q=q, pagina=pagina-1) }}">← Anterior</a>
+    {% else %}
+      <span></span>
+    {% endif %}
+
+    <span>Página <b>{{ pagina }}</b> de <b>{{ total_paginas }}</b></span>
+
+    {% if pagina < total_paginas %}
+      <a class="btn secondary" href="{{ url_for('historico_geral', tipo=tipo, q=q, pagina=pagina+1) }}">Próxima →</a>
+    {% endif %}
+  </nav>
+  {% endif %}
 </section>
 {% endblock %}
