@@ -1589,3 +1589,137 @@ body.china-app{font-family:Inter,Segoe UI,Arial,sans-serif;overflow-x:hidden}
     grid-template-columns:1fr;
   }
 }
+
+
+/* =========================================================
+   ADM — HISTÓRICO SEMANAL
+   ========================================================= */
+.weekly-picker{
+  margin-bottom:12px;
+}
+
+.weekly-tabs{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding:4px 0 3px;
+  scrollbar-width:thin;
+}
+
+.weekly-tab{
+  flex:0 0 auto;
+  padding:9px 12px;
+  border:1px solid #31262d;
+  border-radius:9px;
+  background:#0d0c10;
+  color:#9c9298;
+  text-decoration:none;
+  font-size:9px;
+  font-weight:800;
+  transition:.15s ease;
+}
+
+.weekly-tab:hover,
+.weekly-tab.active{
+  color:#fff;
+  border-color:#ef2e70;
+  background:rgba(239,46,112,.12);
+}
+
+.weekly-summary-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px;
+  margin-bottom:14px;
+}
+
+.weekly-summary{
+  padding:14px!important;
+  display:grid;
+  gap:6px;
+}
+
+.weekly-summary>span{
+  color:#aaa0a6;
+  font-size:9px;
+  font-weight:800;
+}
+
+.weekly-summary>strong{
+  color:#fff;
+  font-size:18px;
+}
+
+.weekly-summary>small{
+  color:#ff74a4;
+  font-size:9px;
+}
+
+.weekly-member-list{
+  display:grid;
+  gap:8px;
+}
+
+.weekly-member-row{
+  display:grid;
+  grid-template-columns:minmax(180px,1.5fr) repeat(3,minmax(130px,1fr));
+  gap:10px;
+  align-items:center;
+  padding:12px;
+  border:1px solid #2b2328;
+  border-radius:10px;
+  background:#0c0b0f;
+}
+
+.weekly-member-name,
+.weekly-member-metric{
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+
+.weekly-member-name strong{
+  color:#fff;
+  font-size:11px;
+}
+
+.weekly-member-name span,
+.weekly-member-name small{
+  color:#8d848a;
+  font-size:8px;
+}
+
+.weekly-member-metric span{
+  color:#81787e;
+  font-size:8px;
+}
+
+.weekly-member-metric b{
+  color:#fff;
+  font-size:13px;
+}
+
+.weekly-member-metric small{
+  color:#ff74a4;
+  font-size:8px;
+}
+
+@media(max-width:1000px){
+  .weekly-summary-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+  .weekly-member-row{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:600px){
+  .weekly-summary-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .weekly-member-row{
+    grid-template-columns:1fr;
+  }
+}

@@ -959,16 +959,47 @@ def configurar_rotas(app):
     @app.route("/dashboard")
     @login_required
     def dashboard():
-        consulta_usuario = Operacao.query.filter_by(usuario_id=current_user.id)
+        # O Dashboard é SEMANAL. Na virada de domingo 00:00 os números
+        # começam automaticamente em zero sem destruir o histórico.
+        inicio_local, fim_local = periodo_semana()
+        inicio_utc = inicio_local.astimezone(timezone.utc)
+        fim_utc = fim_local.astimezone(timezone.utc)
+
+        consulta_usuario = Operacao.query.filter(
+            Operacao.usuario_id == current_user.id,
+            Operacao.criado_em >= inicio_utc,
+            Operacao.criado_em < fim_utc,
+        )
         total_operacoes = consulta_usuario.count()
-        valor_total = db.session.query(func.coalesce(func.sum(Operacao.valor), 0)).filter(Operacao.usuario_id == current_user.id).scalar()
-        ganhos_total = db.session.query(func.coalesce(func.sum(Operacao.valor_porcentagem), 0)).filter(Operacao.usuario_id == current_user.id).scalar()
+        valor_total = db.session.query(func.coalesce(func.sum(Operacao.valor), 0)).filter(
+            Operacao.usuario_id == current_user.id,
+            Operacao.criado_em >= inicio_utc,
+            Operacao.criado_em < fim_utc,
+        ).scalar()
+        ganhos_total = db.session.query(func.coalesce(func.sum(Operacao.valor_porcentagem), 0)).filter(
+            Operacao.usuario_id == current_user.id,
+            Operacao.criado_em >= inicio_utc,
+            Operacao.criado_em < fim_utc,
+        ).scalar()
         ultimas_operacoes = consulta_usuario.order_by(Operacao.criado_em.desc(), Operacao.id.desc()).limit(10).all()
         progresso = resumo_meta_semanal(current_user)
         data_hoje = agora_local().strftime("%d/%m/%Y")
-        total_acoes = Acao.query.filter_by(usuario_id=current_user.id).count()
-        total_desmanches = Desmanche.query.filter_by(usuario_id=current_user.id).count()
-        pontos_acao = db.session.query(func.coalesce(func.sum(ExtratoPonto.pontos), 0)).filter(ExtratoPonto.usuario_id == current_user.id, ExtratoPonto.categoria == "acao").scalar()
+        total_acoes = Acao.query.filter(
+            Acao.usuario_id == current_user.id,
+            Acao.data_hora >= inicio_utc,
+            Acao.data_hora < fim_utc,
+        ).count()
+        total_desmanches = Desmanche.query.filter(
+            Desmanche.usuario_id == current_user.id,
+            Desmanche.data_hora >= inicio_utc,
+            Desmanche.data_hora < fim_utc,
+        ).count()
+        pontos_acao = db.session.query(func.coalesce(func.sum(ExtratoPonto.pontos), 0)).filter(
+            ExtratoPonto.usuario_id == current_user.id,
+            ExtratoPonto.categoria == "acao",
+            ExtratoPonto.criado_em >= inicio_utc,
+            ExtratoPonto.criado_em < fim_utc,
+        ).scalar()
 
         return render_template(
             "dashboard.html",
@@ -2249,6 +2280,222 @@ def configurar_rotas(app):
 
 
 
+
+    @app.route("/admin/semanas")
+    @login_required
+    @admin_required
+    def admin_semanas():
+        """
+        Histórico semanal administrativo.
+        Os dados são calculados diretamente dos registros preservados,
+        portanto a virada semanal não apaga o histórico.
+        """
+        agora = datetime.now(FUSO_LOCAL)
+        inicio_atual, fim_atual = periodo_semana(agora)
+
+        try:
+            deslocamento = max(
+                0,
+                int(request.args.get("semana", 0)),
+            )
+        except (TypeError, ValueError):
+            deslocamento = 0
+
+        # Evita consultas absurdamente antigas pela URL.
+        deslocamento = min(deslocamento, 260)
+
+        inicio_local = inicio_atual - timedelta(
+            weeks=deslocamento
+        )
+        fim_local = inicio_local + timedelta(days=7)
+
+        inicio_utc = inicio_local.astimezone(timezone.utc)
+        fim_utc = fim_local.astimezone(timezone.utc)
+
+        operacoes = Operacao.query.filter(
+            Operacao.criado_em >= inicio_utc,
+            Operacao.criado_em < fim_utc,
+        ).all()
+
+        acoes = Acao.query.filter(
+            Acao.data_hora >= inicio_utc,
+            Acao.data_hora < fim_utc,
+        ).all()
+
+        desmanches = Desmanche.query.filter(
+            Desmanche.data_hora >= inicio_utc,
+            Desmanche.data_hora < fim_utc,
+        ).all()
+
+        usuarios = {
+            usuario.id: usuario
+            for usuario in Usuario.query.all()
+        }
+
+        perfis_game = {
+            perfil.usuario_id: perfil
+            for perfil in PerfilGame.query.all()
+        }
+
+        membros = {}
+
+        def membro(usuario_id):
+            if usuario_id not in membros:
+                usuario = usuarios.get(usuario_id)
+                perfil = perfis_game.get(usuario_id)
+
+                membros[usuario_id] = {
+                    "usuario": (
+                        usuario.usuario
+                        if usuario
+                        else "Conta removida"
+                    ),
+                    "nome_game": (
+                        perfil.nome_game
+                        if perfil
+                        else "Não configurado"
+                    ),
+                    "id_game": (
+                        perfil.id_game
+                        if perfil
+                        else "—"
+                    ),
+                    "cargo": (
+                        usuario.cargo
+                        if usuario
+                        else "—"
+                    ),
+                    "lavagens": 0,
+                    "valor_lavado": Decimal("0"),
+                    "ganho_lavagem": Decimal("0"),
+                    "acoes": 0,
+                    "vitorias": 0,
+                    "derrotas": 0,
+                    "pontos_acoes": 0,
+                    "desmanches": 0,
+                    "valor_desmanches": Decimal("0"),
+                    "pontos_desmanches": 0,
+                }
+
+            return membros[usuario_id]
+
+        for item in operacoes:
+            dados = membro(item.usuario_id)
+            dados["lavagens"] += 1
+            dados["valor_lavado"] += Decimal(
+                item.valor or 0
+            )
+            dados["ganho_lavagem"] += Decimal(
+                item.valor_porcentagem or 0
+            )
+
+        for item in acoes:
+            dados = membro(item.usuario_id)
+            dados["acoes"] += 1
+            dados["pontos_acoes"] += int(
+                item.pontos or 0
+            )
+
+            resultado = (
+                item.resultado or ""
+            ).strip().lower()
+
+            if resultado in {
+                "vitória",
+                "vitoria",
+            }:
+                dados["vitorias"] += 1
+            elif resultado == "derrota":
+                dados["derrotas"] += 1
+
+        for item in desmanches:
+            dados = membro(item.usuario_id)
+            dados["desmanches"] += 1
+            dados["valor_desmanches"] += Decimal(
+                item.quantidade or 0
+            )
+            dados["pontos_desmanches"] += int(
+                item.pontos or 0
+            )
+
+        membros_lista = sorted(
+            membros.values(),
+            key=lambda item: (
+                item["lavagens"],
+                item["valor_lavado"],
+                item["acoes"],
+                item["desmanches"],
+            ),
+            reverse=True,
+        )
+
+        resumo = {
+            "lavagens": len(operacoes),
+            "valor_lavado": sum(
+                (
+                    Decimal(item.valor or 0)
+                    for item in operacoes
+                ),
+                Decimal("0"),
+            ),
+            "ganho_lavagem": sum(
+                (
+                    Decimal(item.valor_porcentagem or 0)
+                    for item in operacoes
+                ),
+                Decimal("0"),
+            ),
+            "acoes": len(acoes),
+            "vitorias": sum(
+                1
+                for item in acoes
+                if (item.resultado or "").strip().lower()
+                in {"vitória", "vitoria"}
+            ),
+            "derrotas": sum(
+                1
+                for item in acoes
+                if (item.resultado or "").strip().lower()
+                == "derrota"
+            ),
+            "desmanches": len(desmanches),
+            "valor_desmanches": sum(
+                (
+                    Decimal(item.quantidade or 0)
+                    for item in desmanches
+                ),
+                Decimal("0"),
+            ),
+            "membros_ativos": len(membros_lista),
+        }
+
+        # Navegação rápida das últimas 12 semanas.
+        semanas = []
+
+        for indice in range(12):
+            inicio = inicio_atual - timedelta(
+                weeks=indice
+            )
+            fim = inicio + timedelta(days=7)
+
+            semanas.append({
+                "indice": indice,
+                "inicio": inicio,
+                "fim": fim - timedelta(seconds=1),
+                "atual": indice == 0,
+            })
+
+        return render_template(
+            "admin_semanas.html",
+            resumo=resumo,
+            membros=membros_lista,
+            semanas=semanas,
+            deslocamento=deslocamento,
+            inicio_semana_log=inicio_local,
+            fim_semana_log=fim_local - timedelta(seconds=1),
+        )
+
+
     @app.route("/admin/registros")
     @login_required
     @admin_required
@@ -3052,10 +3299,19 @@ def configurar_rotas(app):
     @app.route("/relatorios")
     @login_required
     def relatorios():
+        # Relatório operacional da SEMANA ATUAL.
+        # Registros antigos continuam disponíveis no Histórico Geral.
+        inicio_local, fim_local = periodo_semana()
+        inicio_utc = inicio_local.astimezone(timezone.utc)
+        fim_utc = fim_local.astimezone(timezone.utc)
+
         resumo = db.session.query(
             func.count(Operacao.id),
             func.coalesce(func.sum(Operacao.valor), 0),
             func.coalesce(func.sum(Operacao.valor_porcentagem), 0),
+        ).filter(
+            Operacao.criado_em >= inicio_utc,
+            Operacao.criado_em < fim_utc,
         ).one()
 
         membros = db.session.query(
@@ -3075,6 +3331,8 @@ def configurar_rotas(app):
             PerfilGame.usuario_id == Usuario.id,
         ).filter(
             Usuario.is_admin.is_(False),
+            Operacao.criado_em >= inicio_utc,
+            Operacao.criado_em < fim_utc,
         ).group_by(
             Usuario.id,
             Usuario.usuario,
@@ -3092,7 +3350,10 @@ def configurar_rotas(app):
             valor_total=resumo[1],
             ganhos_total=resumo[2],
             membros=membros,
+            inicio_semana=inicio_local,
+            fim_semana=fim_local - timedelta(seconds=1),
         )
+
 
     @app.route("/excluir-operacao/<int:id>", methods=["POST"])
     @login_required
@@ -3524,9 +3785,16 @@ def configurar_rotas_gestao(app):
     @login_required
     def acoes():
         perfil = obter_perfil(current_user.id)
-        ultimas = Acao.query.filter_by(usuario_id=current_user.id).order_by(
+        inicio_local, fim_local = periodo_semana()
+        inicio_utc = inicio_local.astimezone(timezone.utc)
+        fim_utc = fim_local.astimezone(timezone.utc)
+        ultimas = Acao.query.filter(
+            Acao.usuario_id == current_user.id,
+            Acao.data_hora >= inicio_utc,
+            Acao.data_hora < fim_utc,
+        ).order_by(
             Acao.data_hora.desc(), Acao.id.desc()
-        ).limit(20).all()
+        ).limit(50).all()
         return render_template(
             "acoes.html",
             tipos=list(PONTOS_ACAO.keys()),
@@ -3711,8 +3979,14 @@ def configurar_rotas_gestao(app):
 
         por_pagina = 50
 
-        consulta = Desmanche.query.filter_by(
-            usuario_id=current_user.id
+        inicio_local, fim_local = periodo_semana()
+        inicio_utc = inicio_local.astimezone(timezone.utc)
+        fim_utc = fim_local.astimezone(timezone.utc)
+
+        consulta = Desmanche.query.filter(
+            Desmanche.usuario_id == current_user.id,
+            Desmanche.data_hora >= inicio_utc,
+            Desmanche.data_hora < fim_utc,
         ).order_by(
             Desmanche.data_hora.desc(),
             Desmanche.id.desc(),

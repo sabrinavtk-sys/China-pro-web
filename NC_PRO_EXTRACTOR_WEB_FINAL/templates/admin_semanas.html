@@ -1,0 +1,125 @@
+{% extends "base_gestao.html" %}
+{% block title %}Histórico Semanal — China PRO{% endblock %}
+{% block page_heading %}Histórico Semanal{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <div>
+    <span class="kicker">AUDITORIA SEMANAL</span>
+    <h2>📅 Log das semanas</h2>
+    <p class="muted">
+      Consulte como foi cada semana sem misturar os dados da semana atual.
+      Os registros antigos permanecem preservados para auditoria.
+    </p>
+  </div>
+  <a class="btn secondary" href="{{ url_for('admin_dashboard') }}">← Voltar ao ADM</a>
+</section>
+
+<section class="card section-block weekly-picker">
+  <div class="section-title">
+    <div>
+      <span class="kicker">SEMANA SELECIONADA</span>
+      <h2>
+        {{ inicio_semana_log.strftime('%d/%m/%Y') }}
+        →
+        {{ fim_semana_log.strftime('%d/%m/%Y') }}
+      </h2>
+      <small class="muted">
+        Domingo 00:00 até sábado 23:59
+        {% if deslocamento == 0 %} • Semana atual{% endif %}
+      </small>
+    </div>
+  </div>
+
+  <div class="weekly-tabs">
+    {% for semana in semanas %}
+      <a
+        class="weekly-tab {% if semana.indice == deslocamento %}active{% endif %}"
+        href="{{ url_for('admin_semanas', semana=semana.indice) }}"
+      >
+        {% if semana.atual %}
+          Atual
+        {% else %}
+          {{ semana.inicio.strftime('%d/%m') }}–{{ semana.fim.strftime('%d/%m') }}
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="weekly-summary-grid">
+  <article class="card weekly-summary">
+    <span>💰 Lavagens</span>
+    <strong>{{ resumo.lavagens }}</strong>
+    <small>R$ {{ "{:,.2f}".format(resumo.valor_lavado).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
+  </article>
+
+  <article class="card weekly-summary">
+    <span>💎 Ganho das lavagens</span>
+    <strong>R$ {{ "{:,.2f}".format(resumo.ganho_lavagem).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong>
+    <small>Percentuais registrados</small>
+  </article>
+
+  <article class="card weekly-summary">
+    <span>🔫 Ações</span>
+    <strong>{{ resumo.acoes }}</strong>
+    <small>{{ resumo.vitorias }} vitórias • {{ resumo.derrotas }} derrotas</small>
+  </article>
+
+  <article class="card weekly-summary">
+    <span>🚗 Desmanches</span>
+    <strong>{{ resumo.desmanches }}</strong>
+    <small>R$ {{ "{:,.2f}".format(resumo.valor_desmanches).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
+  </article>
+
+  <article class="card weekly-summary">
+    <span>👥 Membros ativos</span>
+    <strong>{{ resumo.membros_ativos }}</strong>
+    <small>Com registro nessa semana</small>
+  </article>
+</section>
+
+<section class="card section-block">
+  <div class="section-title">
+    <div>
+      <span class="kicker">DESEMPENHO INDIVIDUAL</span>
+      <h2>📊 Resumo por membro</h2>
+      <small class="muted">Lavagens, ações e desmanches da semana selecionada.</small>
+    </div>
+  </div>
+
+  <div class="weekly-member-list">
+    {% for item in membros %}
+      <article class="weekly-member-row">
+        <div class="weekly-member-name">
+          <strong>{{ item.nome_game }}</strong>
+          <span>#{{ item.id_game }} • {{ item.cargo }}</span>
+          <small>Conta: {{ item.usuario }}</small>
+        </div>
+
+        <div class="weekly-member-metric">
+          <span>💰 Lavagens</span>
+          <b>{{ item.lavagens }}</b>
+          <small>R$ {{ "{:,.2f}".format(item.valor_lavado).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
+        </div>
+
+        <div class="weekly-member-metric">
+          <span>🔫 Ações</span>
+          <b>{{ item.acoes }}</b>
+          <small>{{ item.vitorias }}V / {{ item.derrotas }}D • +{{ item.pontos_acoes }} pts</small>
+        </div>
+
+        <div class="weekly-member-metric">
+          <span>🚗 Desmanches</span>
+          <b>{{ item.desmanches }}</b>
+          <small>R$ {{ "{:,.2f}".format(item.valor_desmanches).replace(",", "X").replace(".", ",").replace("X", ".") }}</small>
+        </div>
+      </article>
+    {% else %}
+      <div class="empty-state">
+        Nenhum registro encontrado nesta semana.
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -15,6 +15,7 @@
 </section>
 
 <div class="admin-top-actions">
+  <a class="btn" href="{{ url_for('admin_semanas') }}">📅 Histórico Semanal</a>
   <a class="btn" href="{{ url_for('admin_registros') }}">📚 Todos os Registros</a>
   <a class="btn secondary" href="{{ url_for('admin_logs') }}">📜 Logs dos ADMs</a>
   <a class="btn secondary" href="{{ url_for('admin_correcoes') }}">📝 Correções{% if correcoes_pendentes %} ({{ correcoes_pendentes }}){% endif %}</a>

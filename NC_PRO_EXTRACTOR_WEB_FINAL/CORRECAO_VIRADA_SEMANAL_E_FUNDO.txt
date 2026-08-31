@@ -1,0 +1,16 @@
+CHINA PRO — CORREÇÃO 31/08/2026
+
+1. VIRADA SEMANAL AUTOMÁTICA
+- Dashboard agora contabiliza somente a semana atual.
+- Relatórios agora contabilizam somente a semana atual.
+- Lista recente de Ações começa limpa a cada nova semana.
+- Lista operacional de Desmanches começa limpa a cada nova semana.
+- Pontos de Ação do Dashboard também respeitam a semana atual.
+- Virada: domingo 00:00 (fuso configurado pelo sistema).
+- NÃO apaga o histórico do banco: registros antigos continuam no Histórico Geral e na auditoria ADM.
+- Isso evita perda de prova/registro e resolve o efeito de 'relatório antigo aparecendo na semana nova'.
+
+2. FUNDO LOGIN/CADASTRO
+- Nova imagem oficial aplicada em Login e Cadastro.
+- Arquivo: static/img/china-pro-auth-bg.png
+- CSS atualizado e cache versionado.
